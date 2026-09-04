@@ -1,0 +1,22 @@
+[project]
+name = "adhigrahan-radar"
+version = "0.1.0"
+description = "Predictive analytics for early detection of land acquisition delays (SIH26017)"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { file = "LICENSE" }
+
+[tool.pytest.ini_options]
+# tests/ holds the pipeline golden suite, backend/tests/ the API suite.
+testpaths = ["tests", "backend/tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["frontend", ".venv", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E741"]

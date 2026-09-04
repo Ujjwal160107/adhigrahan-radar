@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Build artifacts - regenerable with `make build`, never committed.
+data/intermediate/
+data/output/*
+!data/output/.gitkeep
+# Trained models ARE committed: they are small, and a fresh clone must be able
+# to serve without retraining (design spec s12).
+!data/output/models/
+
+# Cached source snapshots are committed so the demo never touches the network,
+# but keep the directory shape even when empty.
+!data/raw/
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Agent scaffolding
+.superpowers/
