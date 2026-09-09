@@ -6,7 +6,7 @@
 make doctor    # verify toolchain versions before installing
 make setup     # venv + pip + npm
 make build     # regenerate data/output from data/input (s0-s15)
-make test      # 108 backend/pipeline tests + 22 frontend tests must stay green
+make test      # 126 backend/pipeline tests + 38 frontend tests must stay green
 ```
 
 `make test` is the gate. Both the linkage engine and the risk engine are built and pinned by

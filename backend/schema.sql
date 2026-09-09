@@ -12,6 +12,13 @@
 -- (Parcel, Person, CourtCase, ... and the risk-engine tables) DELETE their
 -- own rows before reinserting; they never DROP a table, so a partial
 -- rebuild can never leave the schema itself missing.
+--
+-- The one thing IF NOT EXISTS cannot do is ADD a column to a table that
+-- already exists. Adding one here therefore makes an older data/output/
+-- vivaad.db stale, and the load would otherwise fail with a bare
+-- "no column named X". s14 preflights this and says so; the fix is always
+-- `make clean && make build`, because data/output is regenerable by
+-- definition and never the source of truth.
 
 -- ===== Linkage engine (s0-s7) - unchanged contract =====
 
@@ -129,6 +136,12 @@ CREATE TABLE IF NOT EXISTS ModelRun (
   n_train INTEGER, n_test INTEGER,
   n_test_real INTEGER, n_test_synthetic INTEGER,
   cutoff_date TEXT,
+  -- 'isotonic' | 'sigmoid'. s12 picks this from n_train against its own
+  -- ISOTONIC_MIN_ROWS. It used to stop at model_runs.json, so the model
+  -- history screen re-derived it in the browser from a hardcoded 200 -
+  -- the calibration rule living in a React component, one edit away from
+  -- disagreeing with the model it describes.
+  calibration TEXT,
   metrics TEXT,                      -- JSON: roc_auc, pr_auc, brier, precision_at_t_high, ...
   feature_list TEXT,                 -- JSON, ordered
   thresholds TEXT,                   -- JSON {t_high, t_med} or {"high": "suppressed"}

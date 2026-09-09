@@ -4,14 +4,18 @@ import { api } from '../api/client';
 import { ProjectListItem } from '../types/api';
 import { RiskBadge } from '../components/RiskBadge';
 
-const DISTRICTS = ['Sultanpur', 'Amethi', 'Pratapgarh', 'Raebareli', 'Ayodhya',
-  'Barabanki', 'Gonda', 'Basti'];
+// RISK_BANDS is a fixed vocabulary (s12 emits exactly these three), so it
+// stays a literal. The district list is not: it is whatever districts the
+// corpus actually holds, and /dashboard/risk already groups by them. A
+// literal here would silently make a newly ingested district unreachable
+// from the filter while its projects sat in the table underneath.
 const RISK_BANDS = ['HIGH', 'MEDIUM', 'LOW'];
 const PAGE_SIZE = 20;
 
 export const ProjectPortfolio: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const [items, setItems] = useState<ProjectListItem[]>([]);
+  const [districts, setDistricts] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +42,16 @@ export const ProjectPortfolio: React.FC = () => {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [district, riskBand, status, page]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getDashboardRisk()
+      .then((res) => {
+        if (!cancelled) setDistricts(res.districts.map((d) => d.district).sort());
+      })
+      .catch(() => { /* the filter degrades to "all districts", never a stale list */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const updateFilter = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -71,7 +85,7 @@ export const ProjectPortfolio: React.FC = () => {
             className="border-2 border-black px-2 py-1 bg-white"
           >
             <option value="">All</option>
-            {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            {districts.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
         </label>
         <label className="flex items-center gap-2">

@@ -11,10 +11,34 @@ import os
 import sqlite3
 from datetime import UTC, datetime
 
-from common import DATA_MID, DB, SCHEMA_SQL, report
+from common import DATA_MID, DB, SCHEMA_SQL, ContractError, report
 
 RISK_TABLES = ("AcquisitionProject", "ProjectStage", "ProjectParcel",
               "ProjectRisk", "ModelRun")
+
+# Columns s14 writes by name. schema.sql's CREATE TABLE IF NOT EXISTS
+# silently does nothing to a table that already exists, so a vivaad.db
+# built before a column was added still has the old shape and the INSERT
+# below dies with a bare "table ModelRun has no column named calibration".
+# Checked up front instead, with the fix in the message.
+NAMED_INSERT_COLUMNS = {
+    "ModelRun": ("model_version", "stage", "trained_at", "algo", "shipped",
+                 "n_train", "n_test", "n_test_real", "n_test_synthetic",
+                 "cutoff_date", "calibration", "metrics", "feature_list",
+                 "thresholds", "notes"),
+}
+
+
+def _require_columns(con):
+    for table, columns in NAMED_INSERT_COLUMNS.items():
+        have = {r[1] for r in con.execute(f"PRAGMA table_info({table})")}
+        missing = sorted(set(columns) - have)
+        if missing:
+            raise ContractError(
+                f"{table} in {DB} is missing {missing}. This database predates a "
+                "schema.sql change, and CREATE TABLE IF NOT EXISTS cannot add a "
+                "column to an existing table. data/output is regenerable, so "
+                "rebuild it: make clean && make build")
 
 
 def _load_json(name):
@@ -26,6 +50,7 @@ def run():
     con = sqlite3.connect(DB)
     con.execute("PRAGMA foreign_keys = OFF")  # bulk load; re-enabled after
     con.executescript(open(SCHEMA_SQL, encoding="utf-8").read())
+    _require_columns(con)
     for t in RISK_TABLES:
         con.execute(f"DELETE FROM {t}")
 
@@ -76,12 +101,13 @@ def run():
     # algo, which would violate ModelRun's UNIQUE(model_version, stage).
     con.executemany(
         "INSERT INTO ModelRun (model_version,stage,trained_at,algo,shipped,"
-        "n_train,n_test,n_test_real,n_test_synthetic,cutoff_date,metrics,"
-        "feature_list,thresholds,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "n_train,n_test,n_test_real,n_test_synthetic,cutoff_date,calibration,"
+        "metrics,feature_list,thresholds,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         [(m["model_version"], m["stage"], m["trained_at"], m["shipped_algo"], 1,
           m["n_train"], m["n_test"], m["n_test_real"], m["n_test_synthetic"],
-          m["cutoff_date"], json.dumps(m["runs"]), json.dumps(m["feature_list"]),
-          json.dumps(m["thresholds"]), m["notes"]) for m in model_runs],
+          m["cutoff_date"], m["calibration"], json.dumps(m["runs"]),
+          json.dumps(m["feature_list"]), json.dumps(m["thresholds"]), m["notes"])
+         for m in model_runs],
     )
 
     con.commit()

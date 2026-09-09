@@ -7,8 +7,8 @@ imported by request-time code.
 python pipeline/run_all.py                  # full build, s0 -> s15
 python pipeline/run_all.py --skip-handoff   # rebuild without regenerating data/input (default)
 python pipeline/run_all.py --risk-only      # s8 -> s15 only, against an existing vivaad.db
-python -m pytest tests/ backend/tests/ -q   # 123 tests today
-cd frontend && npm test                     # 22 frontend tests
+python -m pytest tests/ backend/tests/ -q   # 126 tests today
+cd frontend && npm test                     # 38 frontend tests
 ```
 
 Dependency direction is one-way and never reversed:
@@ -107,7 +107,7 @@ GET /cases/UPHC020611812025    ->  data/output/fallback/cases/UPHC020611812025.j
 | Parcel status | 12 RED · 62 AMBER · 61 GREEN |
 | Sale during pendency | 8 of 12 RED parcels (systemic lis-pendens pattern, `tests/test_golden.py`) |
 | Flagship | **P-B01 = RED @ 0.9105**, P-A01 = GREEN |
-| Tests | 13 (linkage golden suite) + 44 (API suite) |
+| Tests | 13 (linkage golden suite) + 47 (API suite) |
 
 ## Current build (s8–s15)
 

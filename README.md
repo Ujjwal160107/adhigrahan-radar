@@ -72,7 +72,7 @@ frontend.
 | Backend — 10 risk/project/model/auth endpoints | **Built** |
 | Frontend — risk dashboard, project portfolio, project detail, model registry | **Built** |
 | Frontend — litigation search, result, officer heatmap, watchlist | **Built** (demoted to `/lookup/*`, the evidence drill-down layer) |
-| Tests | **130** (108 backend/pipeline + 22 frontend), all green |
+| Tests | **164** (126 backend/pipeline + 38 frontend), all green |
 
 Current build:
 
@@ -85,12 +85,12 @@ Current build:
 | Flagship parcel | `P-B01` = RED @ 0.9105 · `P-A01` = GREEN |
 | Longest litigation pendency | **~2.6 years** |
 | Acquisition districts | 8 (Sultanpur, Amethi, Pratapgarh, Raebareli, Ayodhya, Barabanki, Gonda, Basti) — **synthetic**, see [Honesty rules](#honesty-rules) |
-| Acquisition projects / stage-rows | 96 / 385 (337 closed, 48 open) |
-| Flagship project | `PRJ-SUL-001` — HIGH risk, 56.97% delay probability, bound to `P-B01` |
-| Risk bands on open stages | 27 HIGH · 14 MEDIUM · 7 LOW |
-| Median lead time (open stages) | 52 days |
-| Models shipped | logistic_regression (4 of 5 stages) · base_rate (`possession` — the naive prior beat both learned models on this corpus; HIGH suppressed for that stage) |
-| Tests | 130, all green |
+| Acquisition projects / stage-rows | 96 / 383 (336 closed, 47 open) |
+| Flagship project | `PRJ-SUL-001` — MEDIUM risk, 19.53% delay probability, bound to `P-B01` |
+| Risk bands on open stages | 15 HIGH · 29 MEDIUM · 3 LOW |
+| Median lead time (open stages) | 53 days |
+| Models shipped | hgb_calibrated (2 stages) · base_rate (2 — the naive prior beat both learned models there; HIGH suppressed for both) · logistic_regression (1) |
+| Tests | 164, all green |
 
 ---
 
@@ -100,7 +100,7 @@ Current build:
 make doctor    # verify Python 3.11-3.13 and Node >=20 before installing anything
 make setup     # python venv + pip install + npm install
 make build     # regenerate data/output from the committed contract (s0-s15)
-make test      # 108 backend/pipeline tests + 22 frontend tests
+make test      # 126 backend/pipeline tests + 38 frontend tests
 make api       # http://localhost:8000
 make web       # http://localhost:5173   (separate terminal)
 ```
@@ -233,13 +233,20 @@ technical reviewer is an unlabelled fabricated number.
 5. **Derived court dates say so.** No case in the corpus carries a real next-hearing date, so
    the pipeline derives one for active cases only and stamps `next_hearing_source='derived'`.
 6. **Precision-first bands.** RED requires a HIGH-confidence identifier match on an active
-   case. HIGH delay risk is emitted only if it clears ≥ 0.70 precision on held-out data —
-   otherwise the band is suppressed entirely. It is currently suppressed for the `possession`
-   stage, where `base_rate` beat both learned models on this corpus.
-7. **No hardcoded demo data in the frontend.** Every dashboard number, chart, table row and
-   badge is read from the database through the API. Where a value cannot be computed
-   (e.g. a district with no litigation corpus), the UI says so explicitly rather than
-   substituting a default.
+   case. HIGH delay risk is emitted only if it clears ≥ 0.70 precision on held-out data
+   **and sits at or above the rate at which that stage overruns anyway** — otherwise the
+   band is suppressed entirely, and the model registry says why. The base-rate floor is
+   what makes the band mean "elevated": below it, HIGH fires on the ordinary project and
+   is unexplainable by construction — the score is the model baseline plus each feature's
+   contribution, so a row *below* the baseline reaches HIGH with every SHAP driver pointing
+   at lower risk. HIGH is currently suppressed for `notification_3a_11` and `possession`,
+   where `base_rate` beat both learned models on this corpus.
+7. **No hardcoded demo data — or business rules — in the frontend.** Every dashboard number,
+   chart, table row, badge and filter option is read from the database through the API,
+   including the district list itself. Where a value cannot be computed (e.g. a district
+   with no litigation corpus), the UI says so explicitly rather than substituting a default.
+   The frontend also never re-derives a decision the pipeline made: the model registry
+   reports the calibration branch `s12` recorded, it does not recompute it from a row count.
 
 ---
 

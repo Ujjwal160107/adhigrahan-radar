@@ -17,8 +17,8 @@ def history():
     conn = get_conn()
     rows = conn.execute(
         """SELECT model_version, stage, algo, shipped, n_train, n_test,
-                  n_test_real, n_test_synthetic, cutoff_date, metrics,
-                  thresholds, notes, trained_at
+                  n_test_real, n_test_synthetic, cutoff_date, calibration,
+                  metrics, thresholds, notes, trained_at
            FROM ModelRun WHERE shipped=1 ORDER BY stage"""
     ).fetchall()
     runs = []

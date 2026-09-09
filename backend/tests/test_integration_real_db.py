@@ -5,13 +5,16 @@ path and points VIVAAD_DB at that copy. The test module fails at collection
 time if the tracked file is missing (run pipeline/run_all.py first).
 
 Run: python -m pytest backend/tests/test_integration_real_db.py -v"""
+import json
 import shutil
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-REAL_DB = Path(__file__).resolve().parents[2] / "data" / "output" / "vivaad.db"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+REAL_DB = REPO_ROOT / "data" / "output" / "vivaad.db"
+FALLBACK = REPO_ROOT / "data" / "output" / "fallback"
 FLAGSHIP_CNR = "UPHC020611812025"
 
 
@@ -128,3 +131,34 @@ def test_intervention_create_and_list(real_client):
     listed = real_client.get("/projects/PRJ-SUL-001/interventions").json()
     assert any(i["action"] == "Escalated to district legal cell"
               for i in listed["interventions"])
+
+
+def test_models_history_matches_the_fallback_cache(real_client):
+    """s15 and backend/routers/models.py render this response from the same
+    table with two separate SELECTs - deliberately, since pipeline code may
+    never run in the request path. Two copies of a projection drift: adding
+    `calibration` meant editing both, and nothing would have caught editing
+    only one. Tier 2 must be byte-compatible with tier 1 or the fallback
+    silently serves a different shape than the API it stands in for."""
+    cached = json.loads((FALLBACK / "models_history.json").read_text(encoding="utf-8"))
+    live = real_client.get("/models/history").json()
+    assert live == cached
+
+
+def test_models_history_reports_the_calibration_the_pipeline_chose(real_client):
+    """The model registry screen used to recompute this in the browser from
+    a hardcoded row count. s12 decides it; the API has to carry it, or the
+    screen has no honest source and goes back to guessing."""
+    for run in real_client.get("/models/history").json()["runs"]:
+        assert run["calibration"] in ("isotonic", "sigmoid"), run["stage"]
+
+
+def test_suppressed_high_band_states_why_over_the_api(real_client):
+    """A stage with no HIGH band is a claim the product declines to make.
+    The reason has to reach the officer, not stop at model_runs.json."""
+    for run in real_client.get("/models/history").json()["runs"]:
+        thresholds = run["thresholds"]
+        if thresholds.get("high") == "suppressed":
+            assert thresholds.get("reason"), run["stage"]
+        else:
+            assert thresholds.get("t_high") is not None, run["stage"]

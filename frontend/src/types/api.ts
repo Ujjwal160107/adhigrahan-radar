@@ -357,8 +357,15 @@ export interface ModelRunEntry {
   n_test_real: number;
   n_test_synthetic: number;
   cutoff_date: string;
+  /** 'isotonic' | 'sigmoid' - the branch s12 took, never re-derived here. */
+  calibration: string | null;
   metrics: Record<string, ModelRunMetrics>;
-  thresholds: { t_high?: number; t_med?: number; high?: string };
+  /**
+   * Either a real cutoff (`t_high`/`t_med`) or `high: 'suppressed'` with the
+   * `reason` s12 recorded - no cutoff cleared both the precision target and
+   * the stage's own base rate.
+   */
+  thresholds: { t_high?: number; t_med?: number; high?: string; reason?: string };
   notes: string;
   trained_at: string;
 }

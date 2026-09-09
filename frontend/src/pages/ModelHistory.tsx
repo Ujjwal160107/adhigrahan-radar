@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { ModelRunEntry } from '../types/api';
+import {
+  calibrationLabel, highThresholdLabel, isUnshipped, shippedLabel, suppressionReason,
+} from './modelRunView';
 
 const STAGE_LABELS: Record<string, string> = {
   notification_3a_11: 'Notification (3A / S.11)',
@@ -67,7 +70,11 @@ export const ModelHistory: React.FC = () => {
                 {STAGE_LABELS[run.stage] || run.stage}
               </h2>
               <span className="font-mono text-xs text-ink-muted">
-                Shipped: <strong className="text-black">{run.algo}</strong> · {run.model_version}
+                Shipped:{' '}
+                <strong className={isUnshipped(run) ? 'text-radar-amber' : 'text-black'}>
+                  {shippedLabel(run)}
+                </strong>{' '}
+                · {run.model_version}
               </span>
             </div>
             <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-xs border-b-2 border-black">
@@ -81,19 +88,23 @@ export const ModelHistory: React.FC = () => {
               </div>
               <div>
                 <div className="text-[10px] uppercase text-ink-muted">Calibration</div>
-                <div className="font-bold mt-1 capitalize">
-                  {run.metrics[run.algo] ? (run.n_train >= 200 ? 'Isotonic' : 'Sigmoid') : '—'}
-                </div>
+                <div className="font-bold mt-1">{calibrationLabel(run)}</div>
               </div>
               <div>
                 <div className="text-[10px] uppercase text-ink-muted">HIGH threshold</div>
-                <div className="font-bold mt-1">
-                  {run.thresholds.high === 'suppressed'
-                    ? 'Suppressed'
-                    : run.thresholds.t_high != null ? run.thresholds.t_high.toFixed(3) : '—'}
-                </div>
+                <div className="font-bold mt-1">{highThresholdLabel(run)}</div>
               </div>
             </div>
+
+            {suppressionReason(run) ? (
+              <div className="px-5 py-3 border-b-2 border-black bg-[#FEF3C7] font-mono text-xs text-black">
+                <strong>No HIGH band for this stage.</strong>{' '}
+                {suppressionReason(run)}. A HIGH cutoff has to clear both the
+                precision target and the rate at which this stage overruns anyway -
+                below that it would fire on the ordinary project, so the product
+                shows no HIGH badge here rather than one it did not earn.
+              </div>
+            ) : null}
             <div className="p-5 overflow-x-auto">
               <table className="w-full text-left font-mono text-xs border-collapse">
                 <thead>
@@ -106,6 +117,13 @@ export const ModelHistory: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/10">
+                  {Object.keys(run.metrics).length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-2 text-ink-muted">
+                        No algorithm could be fitted for this stage - see the note below.
+                      </td>
+                    </tr>
+                  ) : null}
                   {Object.entries(run.metrics).map(([algo, m]) => (
                     <tr key={algo} className={algo === run.algo ? 'font-bold' : ''}>
                       <td className="py-2 pr-4">{algo}</td>

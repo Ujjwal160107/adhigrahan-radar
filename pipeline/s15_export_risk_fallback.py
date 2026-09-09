@@ -187,8 +187,8 @@ def dashboard_risk_map_payload(con):
 def models_history_payload(con):
     rows = _rows(con,
         """SELECT model_version, stage, algo, shipped, n_train, n_test,
-                  n_test_real, n_test_synthetic, cutoff_date, metrics,
-                  thresholds, notes, trained_at
+                  n_test_real, n_test_synthetic, cutoff_date, calibration,
+                  metrics, thresholds, notes, trained_at
            FROM ModelRun WHERE shipped=1 ORDER BY stage""")
     for r in rows:
         r["metrics"] = json.loads(r["metrics"])

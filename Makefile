@@ -3,7 +3,7 @@
 # Fresh clone, in order:
 #   make setup     install python + node dependencies
 #   make build     regenerate data/output from the committed contract (s0-s15)
-#   make test      108 backend tests + 22 frontend tests, all green
+#   make test      126 backend/pipeline tests + 38 frontend tests, all green
 #   make api       serve on :8000
 #   make web       serve on :5173  (separate terminal)
 
