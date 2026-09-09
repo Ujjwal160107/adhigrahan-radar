@@ -56,13 +56,24 @@ Leakage discipline (the load-bearing rule of this stage):
     train/test boundary and the feature computation boundary can never
     drift apart.
 
-Sultanpur confound: the real litigation corpus (s0-s7) covers Sultanpur
-only. The former `district_active_land_cases` feature was
+Coverage confound: the real litigation corpus (s0-s7) covers one district.
+The former `district_active_land_cases` feature was
 `<count> if district == 'Sultanpur' else 0` - a rescaled district dummy
 carrying no information beyond `litigation_coverage`, which already says
 the same thing. It is dropped rather than kept as a second copy of the
-same indicator. `district_median_3a_to_3d_days` is left NULL (not 0) for a
-district with no closed history, because unknown is not zero.
+same indicator.
+
+`litigation_coverage` itself was left as `1 if district == 'Sultanpur'
+else 0`, i.e. the same hardcoded district literal the feature above was
+deleted for. It is now derived from the districts that actually have
+parcels in vivaad.db. That matters beyond tidiness: the flag exists to
+say "no litigation signal is available here", and the moment a second
+district is ingested the literal would keep asserting no-coverage over a
+district whose `share_parcels_red` was non-zero - the model would be told
+the evidence it is being shown does not exist.
+
+`district_median_3a_to_3d_days` is left NULL (not 0) for a district with
+no closed history, because unknown is not zero.
 
 tests/test_features.py enforces all of the above mechanically, not just by
 convention - in particular ::test_observation_point_is_independent_of_outcome,
@@ -223,6 +234,11 @@ def run():
     interim_dates = _interim_order_dates(con)
     village_by_parcel = {r["id"]: r["village_canon"]
                         for r in con.execute("SELECT id, village_canon FROM Parcel")}
+    # Which districts the linkage engine actually covers, read from the
+    # corpus rather than named in code - see the module docstring.
+    litigation_districts = {
+        r["district"] for r in con.execute(
+            "SELECT DISTINCT district FROM Parcel WHERE district IS NOT NULL")}
     con.close()
 
     projects_by_id = {p["project_id"]: p for p in projects}
@@ -321,7 +337,7 @@ def run():
             "stage_completed_on": stage_row["completed_on"],
             "district": p["district"], "source_label": "model_generated",
             **lit,
-            "litigation_coverage": 1 if p["district"] == "Sultanpur" else 0,
+            "litigation_coverage": 1 if p["district"] in litigation_districts else 0,
             "area_hectares": p["area_hectares"], "n_parcels": len(parcel_ids),
             "n_villages": n_villages, "affected_families": p["affected_families"],
             "days_in_current_stage": days_in_stage,
@@ -369,6 +385,7 @@ def run():
         "rows_per_covered_stage": (round(len(train_rows) / stages_covered, 2)
                                    if stages_covered else 0),
         "serving_rows": int(df.is_serving_row.sum()),
+        "litigation_districts": ",".join(sorted(litigation_districts)),
         "rows_with_litigation_coverage": int((df.litigation_coverage == 1).sum()),
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
     })

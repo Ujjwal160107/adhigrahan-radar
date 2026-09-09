@@ -30,7 +30,7 @@ import os
 import sqlite3
 from datetime import UTC, datetime
 
-from common import DATA_MID, DB, report
+from common import DATA_MID, DB, FLAGSHIP_PROJECT_ID, report
 from s2_normalize import norm_place
 
 
@@ -80,7 +80,7 @@ def run():
     projects_with_parcels = len({b["project_id"] for b in bindings})
     parcels_bound = len({b["parcel_id"] for b in bindings})
     flagship_parcels = sorted({b["parcel_id"] for b in bindings
-                               if b["project_id"] == "PRJ-SUL-001"})
+                               if b["project_id"] == FLAGSHIP_PROJECT_ID})
     report("s10", {
         "bindings": len(bindings), "projects": len(projects),
         "projects_with_parcels": projects_with_parcels,

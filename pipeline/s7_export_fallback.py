@@ -14,7 +14,14 @@ import json
 import os
 import sqlite3
 
-from common import DB, FALLBACK, FLAGSHIP_CNR, report
+from common import (
+    DB,
+    FALLBACK,
+    FLAGSHIP_CNR,
+    FLAGSHIP_PARCEL_CLEAN,
+    FLAGSHIP_PARCEL_RED,
+    report,
+)
 
 
 def _rows(con, sql, args=()):
@@ -169,10 +176,10 @@ def run():
 
     # tier 3 - the flagship pair, bundled into the frontend
     _write("flagship.json", {
-        "parcel_b": {"parcel": parcel_payload(con, "P-B01"),
-                     "litigation": litigation_payload(con, "P-B01")},
-        "parcel_a": {"parcel": parcel_payload(con, "P-A01"),
-                     "litigation": litigation_payload(con, "P-A01")},
+        "parcel_b": {"parcel": parcel_payload(con, FLAGSHIP_PARCEL_RED),
+                     "litigation": litigation_payload(con, FLAGSHIP_PARCEL_RED)},
+        "parcel_a": {"parcel": parcel_payload(con, FLAGSHIP_PARCEL_CLEAN),
+                     "litigation": litigation_payload(con, FLAGSHIP_PARCEL_CLEAN)},
         "case": case_payload(con, FLAGSHIP_CNR),
     })
     con.close()

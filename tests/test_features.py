@@ -20,6 +20,7 @@ Run after every data drop:
 """
 import json
 import os
+import sqlite3
 from datetime import date, timedelta
 
 import pandas as pd
@@ -247,3 +248,25 @@ def test_no_null_features_outside_district_context(features):
                     if c not in NON_FEATURE_COLS and c not in allowed_null]
     for col in feature_cols:
         assert features[col].notna().all(), f"unexpected nulls in {col}"
+
+
+def test_litigation_coverage_is_derived_from_the_corpus_not_a_district_name(features):
+    """`litigation_coverage` said `1 if district == 'Sultanpur' else 0` -
+    the same hardcoded district literal `district_active_land_cases` was
+    deleted for. The flag means "no litigation signal is available here",
+    so it has to follow the corpus: the moment a second district is
+    ingested, a literal would keep asserting no-coverage over a district
+    whose share_parcels_red was non-zero, telling the model the evidence it
+    is being shown does not exist."""
+    con = sqlite3.connect(os.path.join(ROOT, "data", "output", "vivaad.db"))
+    try:
+        covered = {r[0] for r in con.execute(
+            "SELECT DISTINCT district FROM Parcel WHERE district IS NOT NULL")}
+    finally:
+        con.close()
+    flagged = set(features[features.litigation_coverage == 1].district)
+    assert flagged == covered & set(features.district), (
+        f"coverage flag {flagged} does not match the districts with parcels {covered}")
+    uncovered = features[features.litigation_coverage == 0]
+    assert not (set(uncovered.district) & covered), (
+        "a district with real parcels is flagged as having no litigation coverage")

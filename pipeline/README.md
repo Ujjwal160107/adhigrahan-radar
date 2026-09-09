@@ -7,7 +7,7 @@ imported by request-time code.
 python pipeline/run_all.py                  # full build, s0 -> s15
 python pipeline/run_all.py --skip-handoff   # rebuild without regenerating data/input (default)
 python pipeline/run_all.py --risk-only      # s8 -> s15 only, against an existing vivaad.db
-python -m pytest tests/ backend/tests/ -q   # 108 tests today
+python -m pytest tests/ backend/tests/ -q   # 123 tests today
 cd frontend && npm test                     # 22 frontend tests
 ```
 
@@ -41,9 +41,9 @@ for something no user will ever see. Deliberate, not an oversight.
 
 | Stage | Does | Writes |
 |---|---|---|
-| s8_acquisition_handoff | Generates the acquisition contract deterministically (`RISK_SEED`) — no real Bhoomi Rashi snapshot exists in this environment (`data/raw/bhoomirashi/` is an empty placeholder), so every row is `source_label='synthetic'` and disclosed as such. `litigation_risk` archetype projects are routed onto villages with real RED/AMBER parcels (via `s6`'s already-built `vivaad.db`) so the litigation features and the simulated delay are causally consistent, not coincidental | `data/input/{acquisitions,project_stages}.parquet` |
+| s8_acquisition_handoff | Generates the acquisition contract deterministically (`RISK_SEED`) — no real Bhoomi Rashi snapshot exists in this environment (`data/raw/bhoomirashi/` is an empty placeholder), so every row is `source_label='synthetic'` and disclosed as such. `litigation_risk` archetype projects are routed onto villages with real RED/AMBER parcels (via `s6`'s already-built `vivaad.db`) so the litigation features and the simulated delay are causally consistent, not coincidental. Village pools are keyed **by district**, not by a hardcoded district name: a district with no linkage corpus simply has no pool | `data/input/{acquisitions,project_stages}.parquet` |
 | s9_acquisition_ingest | Validates: columns, provenance on every row, a resolvable statutory clock per stage, flagship project present. Computes `deadline_on`/`overdue_days`/`is_delayed` once. **Raises on any violation** | `acquisitions.json`, `project_stages.json` |
-| s10_project_bind | Binds project → parcels using `s2`'s `norm_place` + the already-computed gazetteer mapping from `normalized.json`. **No new matcher.** Only Sultanpur projects ever bind (the only district with a real parcel corpus) | `project_parcels.json` |
+| s10_project_bind | Binds project → parcels using `s2`'s `norm_place` + the already-computed gazetteer mapping from `normalized.json`. **No new matcher.** Only projects in a district the linkage corpus covers ever bind — today that is Sultanpur alone; `n_parcels=0` elsewhere is the honest answer, never a fabricated binding | `project_parcels.json` |
 | s11_features | 19-feature matrix per `(project, stage, landmark)` row, leakage-safe: open stages are scored once at "now", closed stages contribute one row per *statutory* landmark (0.25/0.50/0.75 of the clock) they were still open at. Runs the leakage audit and writes the shared `cutoff_date` for the time-based split | `features.parquet`, `cutoff_date.json` |
 | s12_train | Per-stage `base_rate` + `logistic_regression` + `hgb_calibrated`, time-based split, threshold selection on the holdout. Whichever wins on Brier score ships | `data/output/models/*.joblib` |
 | s13_risk_score | Scores every open stage with its shipped model; real SHAP drivers (wraps `predict_proba` directly — works for any of the three algo types); recommendations retrieved from `recommendations.py`; `predicted_overrun_days` from the empirical median overrun in the same `(stage, band)` bucket | `project_risk.json` |
@@ -107,7 +107,7 @@ GET /cases/UPHC020611812025    ->  data/output/fallback/cases/UPHC020611812025.j
 | Parcel status | 12 RED · 62 AMBER · 61 GREEN |
 | Sale during pendency | 8 of 12 RED parcels (systemic lis-pendens pattern, `tests/test_golden.py`) |
 | Flagship | **P-B01 = RED @ 0.9105**, P-A01 = GREEN |
-| Tests | 44 (linkage golden suite) |
+| Tests | 13 (linkage golden suite) + 44 (API suite) |
 
 ## Current build (s8–s15)
 
@@ -117,14 +117,14 @@ From `s8_report.json` … `s13_report.json`:
 |---|---|
 | Districts | 8 (Sultanpur, Amethi, Pratapgarh, Raebareli, Ayodhya, Barabanki, Gonda, Basti) |
 | Projects | 96 (12 per district) |
-| Stage-rows | 385 (337 closed, 48 open) |
-| Project status | 47 completed · 48 open · 1 lapsed |
-| Project↔parcel bindings | 110, across 12 Sultanpur projects (the only district with a real parcel corpus), 64 unique parcels touched |
-| Flagship project | `PRJ-SUL-001`, bound to `P-B01`, HIGH risk @ 56.97% on `award_3g_23` |
-| Shipped models | `logistic_regression` (4 stages) · `base_rate` (`possession` — the naive prior won; HIGH suppressed there) |
-| Open-stage risk bands | 27 HIGH · 14 MEDIUM · 7 LOW |
-| Median lead time | 52 days |
-| Tests | 64 (acquisition golden + features + model + risk scoring) |
+| Stage-rows | 383 (336 closed, 47 open) |
+| Project status | 47 completed · 47 open · 2 lapsed |
+| Project↔parcel bindings | 116, across 12 Sultanpur projects (the only district with a real parcel corpus), 72 unique parcels touched |
+| Flagship project | `PRJ-SUL-001`, bound to `P-B01`, MEDIUM risk @ 19.53% on `award_3g_23` |
+| Shipped models | `hgb_calibrated` (2) · `base_rate` (2 — the naive prior won; HIGH suppressed there) · `logistic_regression` (1) |
+| Open-stage risk bands | 15 HIGH · 29 MEDIUM · 3 LOW |
+| Median lead time | 53 days |
+| Tests | 66 (acquisition golden + features + model + risk scoring) |
 
 s8–s15 numbers are **synthetic** — see the root README's Honesty rules for what that does and
 does not mean for the reported model metrics.
@@ -178,12 +178,21 @@ inflated claim is the cheapest possible credibility loss.
 5. **Synthetic rows may train; only real rows may score.** No real acquisition
    dataset exists in this environment, so `n_test_real=0` for every stage,
    always, and `ModelRun.notes` says so on every row.
-6. **Small-n model discipline.** The corpus is small (34-90 train rows per
-   stage), so the feature list is capped at 20 per stage model, trees are
+6. **Small-n model discipline.** The corpus is small (90-222 train rows per
+   stage), so the feature list is capped at 19 per stage model, trees are
    shallow (`max_depth=3`, `max_leaf_nodes=8`), and a logistic-regression and
-   a base-rate baseline are reported in the same table. On this corpus,
-   `logistic_regression` won 4 of 5 stages; `base_rate` won `possession` and
-   ships there instead, reported plainly.
+   a base-rate baseline are reported in the same table. On this corpus
+   `base_rate` wins two of five stages and ships there, reported plainly.
+9. **A HIGH band must clear the stage's own base rate.** `t_high` is the
+   lowest holdout probability reaching 0.70 precision *that is also at or
+   above the rate at which the stage overruns anyway*; otherwise HIGH is
+   suppressed. Without that floor the band fires on the ordinary project and
+   is unexplainable by construction: the score is the model baseline plus
+   each feature's contribution, so a row *below* the baseline reached HIGH
+   with every SHAP driver pointing at lower risk — a HIGH badge over five
+   reasons it is not risky, and (since recommendations only fire on
+   risk-increasing drivers) no suggested action.
+   `tests/test_model.py::test_high_band_sits_at_or_above_the_stage_base_rate`.
 7. **`predicted_overrun_days` is not a second model.** It is the empirical
    median overrun among delayed holdout stages of the same stage and risk
    band, rendered as "typically N days late when this happens". A regression

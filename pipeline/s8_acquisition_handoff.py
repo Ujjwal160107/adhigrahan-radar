@@ -19,10 +19,14 @@ consistent with the features (a litigation-heavy project really does run
 long in this corpus, not by coincidence but because the generator makes it
 so), even though the corpus itself is not.
 
-The real litigation corpus (s0-s7) is Sultanpur-only, so Sultanpur is the
-only district where `litigation_coverage=1` is possible; the other seven
-districts exist to satisfy the >=8-district scope target and deliberately
-carry no litigation signal at all.
+The real litigation corpus (s0-s7) covers one district, so that is the only
+district where `litigation_coverage=1` is possible; the other seven exist to
+satisfy the >=8-district scope target and deliberately carry no litigation
+signal at all. Which district that is, is read out of the already-built
+vivaad.db rather than branched on by name: `_load_village_pools` returns a
+pool per district and a district with no pool simply gets no villages, so
+extending the linkage corpus to a second district is a data change here,
+not a code change.
 
 Determinism: everything is drawn from `random.Random(RISK_SEED)`, seeded
 once, consumed in a fixed order, so a rebuild reproduces byte-identical
@@ -40,12 +44,17 @@ from common import (
     DATA_IN,
     DATA_MID,
     DB,
+    DISTRICT,
+    DISTRICT_ABBR,
+    FLAGSHIP_PARCEL_RED,
     FLAGSHIP_PROJECT_ID,
     RISK_SEED,
     STAGE_CLOCKS,
     STAGE_ORDER,
+    STATUS_RANK,
     TODAY,
     clock_authority,
+    parcel_status,
     report,
 )
 
@@ -64,24 +73,46 @@ PROJECT_TYPES = {
 # overdue, lapsed, multi-parcel) is guaranteed to exist, not left to chance.
 # Weights are the background mix; specific slots below force at least one
 # of each regardless of the draw.
-ARCHETYPES = ["healthy", "litigation_risk", "admin_risk", "mixed_risk", "lapsed_history"]
-ARCHETYPE_WEIGHTS = [0.42, 0.14, 0.20, 0.16, 0.08]
+ARCHETYPE_WEIGHTS = {
+    "healthy": 0.42, "litigation_risk": 0.14, "admin_risk": 0.20,
+    "mixed_risk": 0.16, "lapsed_history": 0.08,
+}
 
 N_PER_DISTRICT = 12
 BLOCK_SUFFIXES = ["Sadar", "North", "South", "East", "Rural"]
 
+# A statutory stage that runs this far past its clock voids the
+# notification/proceedings under the Act rather than limping to completion.
+LAPSE_BREACH_MULTIPLE = 1.9
 
-def _district_abbr(district):
-    return district[:3].upper()
+
+def _draw_archetype(rng, exclude=()):
+    """Weighted draw over ARCHETYPE_WEIGHTS, minus `exclude`, renormalised
+    by rng.choices itself.
+
+    The excluded case used to carry a second, hand-written weight list that
+    had to stay the same length as the filtered population - so adding an
+    archetype raised ValueError inside the generator instead of just
+    working, and the two sets of weights had already drifted apart."""
+    pool = {a: w for a, w in ARCHETYPE_WEIGHTS.items() if a not in exclude}
+    return rng.choices(list(pool), weights=list(pool.values()), k=1)[0]
 
 
-def _duration_days(statutory_days, archetype, rng, stage_idx):
+def _duration_days(statutory_days, archetype, rng, stage_idx, force_breach=False):
     """Sampled real duration for one stage. Archetype shifts the
     *distribution* of delay, it does not determine it - ranges overlap
     across the statutory threshold on purpose, so is_delayed is a genuine
     probability the model has to learn, not a label that can be read off
     the archetype with 100% accuracy. A real calibrated classifier facing
-    perfectly separable classes would be a red flag, not a good result."""
+    perfectly separable classes would be a red flag, not a good result.
+
+    `force_breach` is the one exception: the guaranteed-lapse slot draws
+    strictly past LAPSE_BREACH_MULTIPLE instead of rolling for it, so "at
+    least one lapsed project exists" is a property of the generator rather
+    than a 35% chance the golden suite happens to survive."""
+    if force_breach:
+        return round(statutory_days * rng.uniform(LAPSE_BREACH_MULTIPLE + 0.1,
+                                                  LAPSE_BREACH_MULTIPLE + 0.7))
     if archetype == "healthy":
         mult = rng.uniform(0.55, 1.15)
     elif archetype == "litigation_risk":
@@ -106,11 +137,11 @@ def _gazette_republications(archetype, rng):
     return 0
 
 
-def _load_sultanpur_villages():
-    """Real village names from s2's gazetteer output (data/intermediate/
-    normalized.json), bucketed by the worst real litigation status found on
-    any parcel in that village (data/output/vivaad.db, already built by s6
-    at this point in run_all.py's stage order).
+def _load_village_pools():
+    """Village pools PER DISTRICT, bucketed by the worst real litigation
+    status found on any parcel in that village, read from the already-built
+    data/output/vivaad.db (s6 has run by this point in run_all.py's stage
+    order).
 
     This is what makes litigation a *causally* predictive feature rather
     than a cosmetic one: a `litigation_risk` project below is deliberately
@@ -118,42 +149,67 @@ def _load_sultanpur_villages():
     delay it goes on to simulate and the litigation features s11 later
     recomputes from those same real parcels are consistent with each
     other - a model trained on this corpus can genuinely learn "more
-    litigation exposure -> more delay" instead of memorizing an
-    unrelated archetype label.
+    litigation exposure -> more delay" instead of memorizing an unrelated
+    archetype label.
 
-    Soft-fails to empty structures if s2/s6 have not run yet (e.g. s8
-    exercised standalone) - s10 then simply finds nothing to bind, not a
-    contract violation."""
-    norm_path = os.path.join(DATA_MID, "normalized.json")
-    if not os.path.exists(norm_path) or not os.path.exists(DB):
-        return {"all": [], "red": [], "amber": [], "clean": []}
-    with open(norm_path, encoding="utf-8") as fh:
-        norm = json.load(fh)
-    all_villages = sorted({p["village"] for p in norm["parcels"] if p.get("village")})
+    Keyed by district rather than hardcoded to the one district that has a
+    corpus today: which districts the linkage engine covers is a property
+    of the DB, and callers ask this mapping instead of testing a name. A
+    district with no parcels simply has no entry.
 
+    Soft-fails to an empty mapping if s6 has not run yet (e.g. s8 exercised
+    standalone) - s10 then finds nothing to bind, which is a smaller corpus,
+    not a contract violation."""
+    if not os.path.exists(DB):
+        return {}
     con = sqlite3.connect(DB)
-    worst = {}  # village (raw) -> worst status seen
-    rank = {"GREEN": 0, "AMBER": 1, "RED": 2}
-    for p in norm["parcels"]:
-        village = p.get("village")
-        if not village:
-            continue
-        row = con.execute("SELECT status FROM Parcel WHERE id=?", (p["parcel_id"],)).fetchone()
-        status = (row[0] if row and row[0] else "GREEN")
-        if village not in worst or rank[status] > rank[worst[village]]:
-            worst[village] = status
-    con.close()
+    try:
+        rows = con.execute(
+            "SELECT district, village, status FROM Parcel "
+            "WHERE village IS NOT NULL AND district IS NOT NULL").fetchall()
+    finally:
+        con.close()
 
-    return {
-        "all": all_villages,
-        "red": sorted(v for v, s in worst.items() if s == "RED"),
-        "amber": sorted(v for v, s in worst.items() if s == "AMBER"),
-        "clean": sorted(v for v, s in worst.items() if s == "GREEN") or all_villages,
-    }
+    worst = {}  # (district, village) -> worst status seen on any of its parcels
+    for district, village, raw_status in rows:
+        # parcel_status(), not a bare lookup: a status this build did not
+        # write (a foreign DB, a half-finished s5) used to raise KeyError
+        # here and take the whole build down.
+        status = parcel_status(raw_status)
+        key = (district, village)
+        if key not in worst or STATUS_RANK[status] > STATUS_RANK[worst[key]]:
+            worst[key] = status
+
+    bucket = {"RED": "red", "AMBER": "amber", "GREEN": "clean"}
+    pools = {}
+    for (district, village), status in sorted(worst.items()):
+        pool = pools.setdefault(district, {"all": [], "red": [], "amber": [], "clean": []})
+        pool["all"].append(village)
+        pool[bucket[status]].append(village)
+    for pool in pools.values():
+        pool["clean"] = pool["clean"] or pool["all"]
+    return pools
 
 
-def _build_project(pid, district, seq, archetype, rng, sultanpur_villages,
-                    force_stall_stage=None, forced_villages=None):
+def _flagship_village(pools):
+    """The village the flagship RED parcel actually sits in, read from the
+    DB rather than repeated here as a literal: s10 binds the flagship
+    project to that parcel purely by village catchment, so the name s8
+    writes and the name s6 stored have to be the same one."""
+    if not os.path.exists(DB):
+        return None
+    con = sqlite3.connect(DB)
+    try:
+        row = con.execute("SELECT village FROM Parcel WHERE id=?",
+                          (FLAGSHIP_PARCEL_RED,)).fetchone()
+    finally:
+        con.close()
+    return row[0] if row and row[0] and row[0] in pools.get(DISTRICT, {}).get("all", []) else None
+
+
+def _build_project(pid, district, seq, archetype, rng, village_pools,
+                    force_stall_stage=None, force_lapse_stage=None,
+                    forced_villages=None):
     ptype = rng.choice(list(PROJECT_TYPES))
     agency, act = PROJECT_TYPES[ptype]
     name = {
@@ -167,22 +223,32 @@ def _build_project(pid, district, seq, archetype, rng, sultanpur_villages,
     families = max(1, round(area * rng.uniform(3.5, 9.0)))
     budget = round(area * rng.uniform(0.8, 2.4) * 1e7, 2)  # ~INR crore/hectare scale
     block = f"{district} {rng.choice(BLOCK_SUFFIXES)}"
+    # A district with no entry in village_pools has no real parcel corpus
+    # behind it, so it gets no villages and s10 will bind it to nothing -
+    # the honest answer. This is a lookup, not a branch on a district name:
+    # ingesting a second district into the linkage engine gives it a pool
+    # and routes projects onto it with no edit here.
+    pools = village_pools.get(district)
     if forced_villages is not None:
         villages = forced_villages
-    elif district == "Sultanpur" and sultanpur_villages.get("all"):
+    elif pools and pools["all"]:
         n = 1 if area < 20 else (2 if area < 60 else rng.choice([2, 3]))
         if archetype == "litigation_risk":
-            pool = (sultanpur_villages["red"] or sultanpur_villages["amber"]
-                   or sultanpur_villages["all"])
+            pool = pools["red"] or pools["amber"] or pools["all"]
         elif archetype == "healthy":
-            pool = sultanpur_villages["clean"]
+            pool = pools["clean"]
         else:
-            pool = sultanpur_villages["all"]
+            pool = pools["all"]
         villages = rng.sample(pool, k=min(n, len(pool)))
     else:
         villages = []
 
-    if archetype == "litigation_risk":
+    if force_lapse_stage:
+        # Early enough that the deliberately over-long stage still closes
+        # before TODAY: a lapse that has not happened yet is just an open
+        # stage, and the corpus would again have no lapsed project in it.
+        project_start = date(2021, 1, 1) + timedelta(days=rng.randint(0, 400))
+    elif archetype == "litigation_risk":
         # anchored so at least the pre-award stages' observation points
         # fall inside/after the real corpus's filing window (2024-01 to
         # 2025-12, per s1_report.json) - otherwise the leakage gate in s11
@@ -199,7 +265,9 @@ def _build_project(pid, district, seq, archetype, rng, sultanpur_villages,
     project_status = "open"
     for idx, stage in enumerate(STAGE_ORDER):
         clock = STAGE_CLOCKS[stage]
-        duration = _duration_days(clock["statutory_days"], archetype, rng, idx)
+        lapse_here = force_lapse_stage == stage
+        duration = _duration_days(clock["statutory_days"], archetype, rng, idx,
+                                  force_breach=lapse_here)
         completed_on = started_on + timedelta(days=duration)
         # A forced stall (used for the guaranteed "currently overdue,
         # nothing completed" demo scenario) never completes, however long
@@ -228,8 +296,13 @@ def _build_project(pid, district, seq, archetype, rng, sultanpur_villages,
         # share of the lapsed_history archetype's *statutory* stages lapse
         # outright rather than limping to completion, so "lapsed" is a real,
         # inspectable outcome in the corpus and not just a very late one.
-        if (archetype == "lapsed_history" and clock["clock_source"] == "statute"
-                and duration > clock["statutory_days"] * 1.9 and rng.random() < 0.35):
+        # The forced slot takes the same branch without the dice: one
+        # lapsed project is a demo requirement, and it used to rest on a
+        # 35% roll that had produced exactly one in 96.
+        if (clock["clock_source"] == "statute"
+                and duration > clock["statutory_days"] * LAPSE_BREACH_MULTIPLE
+                and (lapse_here or (archetype == "lapsed_history"
+                                    and rng.random() < 0.35))):
             project_status = "lapsed"
             break
         started_on = completed_on
@@ -243,7 +316,7 @@ def _build_project(pid, district, seq, archetype, rng, sultanpur_villages,
             "district": district, "block": block,
             "villages": ",".join(villages),
             "nh_no": f"NH-{100 + seq}" if act == "NH_1956" else None,
-            "gazette_ref": f"UP/LA/{district[:3].upper()}/{2021 + seq % 5}/{100 + seq}",
+            "gazette_ref": f"UP/LA/{DISTRICT_ABBR[district]}/{2021 + seq % 5}/{100 + seq}",
             "area_hectares": area, "affected_families": families,
             "budget_estimate_inr": budget, "status": project_status,
             "gazette_republication_count": republications,
@@ -258,41 +331,45 @@ def _build_project(pid, district, seq, archetype, rng, sultanpur_villages,
 def build():
     rng = random.Random(RISK_SEED)
     projects, stage_rows = [], []
-    sultanpur_villages = _load_sultanpur_villages()
+    village_pools = _load_village_pools()
 
     seq_by_district = {d: 0 for d in ACQUISITION_DISTRICTS}
 
     def next_id(district):
         seq_by_district[district] += 1
         seq = seq_by_district[district]
-        return f"PRJ-{_district_abbr(district)}-{seq:03d}", seq
+        return f"PRJ-{DISTRICT_ABBR[district]}-{seq:03d}", seq
 
     # ---- guaranteed flagship: HIGH risk, litigation-driven, active statute
-    # clock running over. Forced onto Madanpur Panyar so s10 binds it to
-    # the real RED flagship parcel (P-B01, 0.9105), tying the whole product
-    # story (RED parcel -> HIGH-risk project) to one inspectable project.
-    pid, seq = next_id("Sultanpur")
+    # clock running over. Forced onto the flagship RED parcel's own village
+    # so s10 binds it to that parcel, tying the whole product story (RED
+    # parcel -> HIGH-risk project) to one inspectable project. The village
+    # name is read from the DB, not repeated here.
+    pid, seq = next_id(DISTRICT)
     assert pid == FLAGSHIP_PROJECT_ID, f"flagship id drifted: {pid}"
-    rec = _build_project(pid, "Sultanpur", seq, "litigation_risk", rng,
-                         sultanpur_villages, forced_villages=["Madanpur Panyar"])
+    flagship_village = _flagship_village(village_pools)
+    rec = _build_project(pid, DISTRICT, seq, "litigation_risk", rng, village_pools,
+                         forced_villages=[flagship_village] if flagship_village else None)
     projects.append(rec["acquisition"])
     stage_rows.extend(rec["stages"])
 
     # ---- guaranteed scenarios, one per required demo contrast ----
     forced = [
-        ("Sultanpur", "healthy", None),
-        ("Sultanpur", "litigation_risk", None),
-        ("Amethi", "admin_risk", None),
-        ("Pratapgarh", "lapsed_history", None),
-        ("Raebareli", "mixed_risk", None),
+        (DISTRICT, "healthy", None, None),
+        (DISTRICT, "litigation_risk", None, None),
+        ("Amethi", "admin_risk", None, None),
+        # a statutory breach that really does void the notification, so
+        # "lapsed" is guaranteed present rather than rolled for
+        ("Pratapgarh", "lapsed_history", None, "notification_3a_11"),
+        ("Raebareli", "mixed_risk", None, None),
         # currently overdue with nothing completed yet on the open stage
-        ("Ayodhya", "admin_risk", "notification_3a_11"),
-        ("Barabanki", "healthy", None),
+        ("Ayodhya", "admin_risk", "notification_3a_11", None),
+        ("Barabanki", "healthy", None, None),
     ]
-    for district, archetype, stall in forced:
+    for district, archetype, stall, lapse in forced:
         pid, seq = next_id(district)
-        rec = _build_project(pid, district, seq, archetype, rng, sultanpur_villages,
-                             force_stall_stage=stall)
+        rec = _build_project(pid, district, seq, archetype, rng, village_pools,
+                             force_stall_stage=stall, force_lapse_stage=lapse)
         projects.append(rec["acquisition"])
         stage_rows.extend(rec["stages"])
 
@@ -300,14 +377,12 @@ def build():
     for district in ACQUISITION_DISTRICTS:
         while seq_by_district[district] < N_PER_DISTRICT:
             pid, seq = next_id(district)
-            archetype = (rng.choices(ARCHETYPES, weights=ARCHETYPE_WEIGHTS, k=1)[0]
-                         if district == "Sultanpur"
-                         # litigation_risk requires a real litigated parcel to
-                         # bind to in s10, which only exists in Sultanpur.
-                         else rng.choices(
-                             [a for a in ARCHETYPES if a != "litigation_risk"],
-                             weights=[0.46, 0.24, 0.20, 0.10], k=1)[0])
-            rec = _build_project(pid, district, seq, archetype, rng, sultanpur_villages)
+            # litigation_risk requires a real litigated parcel to bind to
+            # in s10, which only exists where the linkage corpus has
+            # coverage - a property of the DB, not of a district's name.
+            archetype = _draw_archetype(
+                rng, exclude=() if district in village_pools else ("litigation_risk",))
+            rec = _build_project(pid, district, seq, archetype, rng, village_pools)
             projects.append(rec["acquisition"])
             stage_rows.extend(rec["stages"])
 

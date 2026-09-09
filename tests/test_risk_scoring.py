@@ -103,3 +103,32 @@ def test_model_version_matches_the_trained_model(scores):
 def test_provenance_is_traceable(scores):
     for s in scores:
         assert s["source_label"] == "model_generated", s["project_id"]
+
+
+def test_high_risk_rows_carry_an_actionable_recommendation(scores):
+    """The consequence of a HIGH badge whose drivers all point downward:
+    recommendations only fire on risk-increasing drivers, so such a row
+    reaches the officer as "HIGH risk, no suggested action". If the band
+    is earned, something must be recommendable."""
+    for s in scores:
+        if s["risk_band"] != "HIGH":
+            continue
+        assert s["recommendations"], (
+            f"{s['project_id']}/{s['stage']} is HIGH with no recommendation - "
+            "its drivers all reduce risk")
+
+
+def test_drivers_only_name_features_the_model_was_trained_on(scores):
+    """A driver naming a feature outside the model's own feature_list means
+    the label table and the feature matrix have drifted - which is how a
+    recommendation rule (R8-DISTRICT-CASELOAD) went on citing
+    district_active_land_cases after s11 stopped emitting it."""
+    with open(os.path.join(MID, "model_runs.json"), encoding="utf-8") as fh:
+        features_by_stage = {r["stage"]: set(r["feature_list"]) for r in json.load(fh)}
+    for s in scores:
+        known = features_by_stage[s["stage"]]
+        for d in s["drivers"]:
+            assert d["feature"] in known, (s["project_id"], d["feature"])
+            assert d["label"], f"{d['feature']} has no officer-facing label"
+        for rec in s["recommendations"]:
+            assert rec["driver"] in known, (s["project_id"], rec["driver"])

@@ -9,6 +9,7 @@ Run after every data drop, alongside tests/test_golden.py:
 import json
 import os
 import sqlite3
+import sys
 from datetime import date, timedelta
 
 import pytest
@@ -224,3 +225,59 @@ def test_flagship_project_scores_high_in_db(con):
         (FLAGSHIP_PROJECT_ID,)).fetchone()
     assert row is not None, "flagship project has no risk score in the DB"
     assert row[0] in ("MEDIUM", "HIGH")
+
+
+def test_project_ids_are_unique_and_district_prefixes_do_not_collide(acquisitions):
+    """project_id is PRJ-<district abbreviation>-<seq>, and the sequence
+    counter is per district - so two districts sharing an abbreviation mint
+    the same id. A fixed 3-letter prefix collides on real UP district pairs
+    (Ballia/Balrampur -> BAL), and the only symptom is s9 failing the build
+    four stages later with "project_id is not unique". The abbreviation must
+    be a bijection with the district set."""
+    ids = [p["project_id"] for p in acquisitions]
+    assert len(set(ids)) == len(ids), "duplicate project_id in the corpus"
+    abbr_to_districts = {}
+    for p in acquisitions:
+        abbr = p["project_id"].split("-")[1]
+        abbr_to_districts.setdefault(abbr, set()).add(p["district"])
+    collisions = {a: sorted(d) for a, d in abbr_to_districts.items() if len(d) > 1}
+    assert not collisions, f"districts sharing a project-id prefix: {collisions}"
+    assert len(abbr_to_districts) == len({p["district"] for p in acquisitions})
+
+
+def test_a_lapsed_project_is_guaranteed_not_rolled_for(acquisitions, archetypes):
+    """One forced slot lapses by construction (s8's force_lapse_stage), so
+    the corpus cannot come out with zero lapsed projects. This used to be a
+    35% dice roll per over-long statutory stage and had produced exactly one
+    lapsed project in 96 - one unlucky seed away from failing the build."""
+    lapsed = [p for p in acquisitions if p["status"] == "lapsed"]
+    assert lapsed, "no lapsed project in the corpus"
+    assert any(archetypes.get(p["project_id"]) == "lapsed_history" for p in lapsed)
+
+
+def test_unexpected_parcel_status_is_bucketed_not_crashed():
+    """s8 ranks villages by the worst Parcel.status behind them. It used to
+    index a bare dict, so a status this build did not write took the whole
+    build down with a KeyError. Unknown must degrade to AMBER, never RED,
+    and never explode - the same rule the serving layer applies."""
+    sys.path.insert(0, os.path.join(ROOT, "pipeline"))
+    from common import STATUS_RANK, parcel_status
+    assert parcel_status(None) == "GREEN"
+    assert parcel_status("UNDER_REVIEW") == "AMBER"
+    assert parcel_status("RED") == "RED"
+    assert STATUS_RANK[parcel_status("UNDER_REVIEW")] < STATUS_RANK["RED"]
+
+
+def test_one_build_today_across_the_pipeline(stages):
+    """s0 placed the flagship sale against one "now", s1 validated it
+    against another, and common carried a third - two of the three had
+    drifted a day apart, quietly widening the contract check s1 exists to
+    enforce. There must be exactly one."""
+    sys.path.insert(0, os.path.join(ROOT, "pipeline"))
+    import s0_handoff
+    from common import TODAY
+    assert s0_handoff.TODAY.date().isoformat() == TODAY
+    # every deadline is resolved against that same date
+    assert all(date.fromisoformat(s["deadline_on"])
+               == date.fromisoformat(s["started_on"]) + timedelta(days=s["statutory_days"])
+               for s in stages)

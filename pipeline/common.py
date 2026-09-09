@@ -20,8 +20,17 @@ SCHEMA_SQL = os.path.join(ROOT, "backend", "schema.sql")
 
 DISTRICT = "Sultanpur"                      # linkage engine (s0-s7) scope - unchanged
 FLAGSHIP_CNR = "UPHC020611812025"          # WRIB/784/2025, active, gata 153 + 1365/1
+FLAGSHIP_PARCEL_RED = "P-B01"              # the litigated parcel the flagship case cites
+FLAGSHIP_PARCEL_CLEAN = "P-A01"            # its clean control, same village
 SEED = 20260820
-TODAY = "2026-08-21"                       # the build's fictional "now" (matches s1_ingest)
+
+# The build's fictional "now", and the only place it is written down. s0
+# places the flagship sale relative to it, s1 validates that placement
+# against it, s8/s9/s11/s13 resolve every statutory clock against it. It
+# used to be spelled three times - here, in s0 as a Timestamp, in s1 as a
+# literal - and two of the three had drifted a day apart, which silently
+# widened the contract check s1 exists to enforce.
+TODAY = "2026-08-21"
 
 # ---- risk engine (s8-s15) --------------------------------------------------
 
@@ -37,6 +46,27 @@ ACQUISITION_DISTRICTS = [
 ]
 FLAGSHIP_PROJECT_ID = "PRJ-SUL-001"          # binds P-B01's parcels; the RED-risk demo anchor
 RISK_SEED = 20260909
+
+
+def _district_abbreviations(districts):
+    """Shortest prefix length that keeps every district distinct, so the
+    PRJ-<abbr>-<seq> id space is collision-free by construction.
+
+    A fixed 3-letter prefix is not. Real UP district pairs collide on it
+    (Ballia/Balrampur both give BAL); the two districts then mint the same
+    project_id, and the only symptom is s9 failing the build four stages
+    later with "acquisitions.project_id is not unique". Widening the
+    prefix until it separates keeps today's ids (SUL, AME, ...) unchanged
+    and makes the next district a data edit rather than a debugging
+    session."""
+    for n in range(3, max(len(d) for d in districts) + 1):
+        abbr = {d: d[:n].upper() for d in districts}
+        if len(set(abbr.values())) == len(districts):
+            return abbr
+    raise ValueError("districts are not distinguishable by prefix: " + str(districts))
+
+
+DISTRICT_ABBR = _district_abbreviations(ACQUISITION_DISTRICTS)
 
 # Five lifecycle stages with a resolvable statutory clock. A sixth,
 # r_and_r (rehabilitation & resettlement), runs in parallel rather than in
@@ -69,6 +99,22 @@ def clock_authority(stage, act):
 
 # PRD 21 - every row must be traceable to exactly one of these.
 PROVENANCE = {"real", "synthetic", "mocked", "derived", "model_generated", "cached"}
+
+# Parcel status vocabulary. s5 decides it, s6 stores it, s8 and s11 read it
+# back out of the DB - so the ranking and the "what if the DB says something
+# else" rule live here once instead of being re-spelled by each reader.
+PARCEL_STATUSES = ("GREEN", "AMBER", "RED")
+STATUS_RANK = {s: i for i, s in enumerate(PARCEL_STATUSES)}
+
+
+def parcel_status(raw):
+    """NULL -> GREEN, unrecognised -> AMBER, never RED. The same rule the
+    serving layer applies (backend/routers/dashboard.py:_bucket), so a
+    foreign or half-built DB degrades identically on both sides instead of
+    taking the build down with a KeyError on an unexpected status."""
+    if raw is None:
+        return "GREEN"
+    return raw if raw in STATUS_RANK else "AMBER"
 
 # PRD 27 - hackathon-initial weights, explicitly unvalidated starting points.
 WEIGHTS = {

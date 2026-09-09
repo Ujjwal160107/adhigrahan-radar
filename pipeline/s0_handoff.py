@@ -21,12 +21,21 @@ import random
 
 import pandas as pd
 import pyarrow.parquet as pq
-from common import DATA_IN, DISTRICT, FLAGSHIP_CNR, SEED, report
+from common import (
+    DATA_IN,
+    DISTRICT,
+    FLAGSHIP_CNR,
+    FLAGSHIP_PARCEL_CLEAN,
+    FLAGSHIP_PARCEL_RED,
+    SEED,
+    report,
+)
+from common import TODAY as TODAY_ISO
 
 SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), "land-cases")
 CENTROID = (26.2647, 82.0727)          # Sultanpur, real centroid (PRD 32)
-TODAY = pd.Timestamp("2026-08-20")
+TODAY = pd.Timestamp(TODAY_ISO)        # one build "now"; see common.TODAY
 
 HONORIFICS = {"SMT", "SHRI", "SRI", "M/S", "DR", "MS"}
 FATHERS = ["Bhola", "Neemar", "Ali Bux", "Ram Autar", "Shyam Lal", "Jagdish",
@@ -288,7 +297,7 @@ def build():
     fl = cases[cases.cnr == FLAGSHIP_CNR].iloc[0]
     window = (pd.Timestamp(fl.filing_date), TODAY)      # active -> filed..present
     parcel_b = {
-        "parcel_id": "P-B01", "survey_no": "1365-1",     # court cites 1365/1
+        "parcel_id": FLAGSHIP_PARCEL_RED, "survey_no": "1365-1",   # court cites 1365/1
         "khasra_no": None, "khata_no": "153",
         "village": "Madanpur Panyar",                     # court says Paniyar
         "taluk": "Sultanpur", "district": DISTRICT, "area": "1.0",
@@ -299,7 +308,7 @@ def build():
         "link_intent": "flagship_red",
     }
     parcel_a = {
-        "parcel_id": "P-A01", "survey_no": "418", "khasra_no": None,
+        "parcel_id": FLAGSHIP_PARCEL_CLEAN, "survey_no": "418", "khasra_no": None,
         "khata_no": None, "village": "Madanpur Paniyar", "taluk": "Sultanpur",
         "district": DISTRICT, "area": "1.6", "owner_name": "Ram Autar Verma",
         "owner_father_name": "Dukhi", "geometry": json.dumps(_poly(rng)),

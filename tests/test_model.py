@@ -152,3 +152,31 @@ def test_determinism_same_seed_same_probabilities(runs):
         # saved model is loadable and produces finite, valid probabilities.
         assert (p >= 0).all() and (p <= 1).all(), stage
         assert recomputed >= 0, stage
+
+
+def test_high_band_sits_at_or_above_the_stage_base_rate(runs):
+    """A HIGH cut below the rate at which the stage overruns anyway does
+    not identify elevated risk - it fires on the ordinary project. It is
+    also unexplainable by construction: the score is the model's baseline
+    plus each feature's contribution, so a row BELOW that baseline reaches
+    HIGH with every feature pushing risk down, and the officer gets a HIGH
+    badge over five drivers that all argue for lower risk.
+
+    Every scoreable stage in this corpus once selected such a cut (0.315
+    against a 0.417 base rate on compensation_disbursed), so this is a
+    systematic property of the threshold rule, not one unlucky project."""
+    for stage, r in runs.items():
+        t_high = r["thresholds"].get("t_high")
+        if t_high is None:
+            continue                      # HIGH suppressed for this stage
+        base = r["runs"]["base_rate"]["train_positive_rate"]
+        assert t_high >= base, (
+            f"{stage}: t_high={t_high} is below the stage base rate {base:.3f} - "
+            "HIGH would fire on the typical project")
+
+
+def test_suppressed_high_band_says_why(runs):
+    for stage, r in runs.items():
+        t = r["thresholds"]
+        if t.get("high") == "suppressed":
+            assert t.get("reason"), f"{stage}: HIGH suppressed with no reason recorded"

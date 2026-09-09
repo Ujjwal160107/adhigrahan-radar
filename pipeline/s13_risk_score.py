@@ -29,7 +29,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import shap
-from common import DATA_IN, DATA_MID, DATA_OUT, TODAY, report
+from common import DATA_IN, DATA_MID, DATA_OUT, FLAGSHIP_PROJECT_ID, TODAY, report
 from recommendations import recommend
 from s11_features import FEATURE_COLUMNS
 
@@ -55,9 +55,19 @@ FEATURE_LABELS = {
     "gazette_republication_count": "3A notification republications",
     "compensation_disbursed_share": "Compensation disbursed so far",
     "district_median_3a_to_3d_days": "District median 3A-to-3D duration",
-    "district_active_land_cases": "District-wide active land litigation",
     "district_completed_projects": "District projects completed to date",
 }
+
+# Every driver s13 renders is looked up by name in FEATURE_LABELS, so a
+# feature with no label is a KeyError in the middle of scoring - after
+# training, with the build half done. Pin it at import instead. The reverse
+# direction is checked too: `district_active_land_cases` sat here for a
+# release after s11 stopped emitting it, describing a driver no officer
+# could ever be shown.
+assert set(FEATURE_LABELS) == set(FEATURE_COLUMNS), (
+    "FEATURE_LABELS and s11.FEATURE_COLUMNS disagree: "
+    f"unlabelled={sorted(set(FEATURE_COLUMNS) - set(FEATURE_LABELS))}, "
+    f"orphaned={sorted(set(FEATURE_LABELS) - set(FEATURE_COLUMNS))}")
 
 
 def _impute(X, medians):
@@ -185,7 +195,7 @@ def run():
     band_counts = {}
     for s in scores:
         band_counts[s["risk_band"]] = band_counts.get(s["risk_band"], 0) + 1
-    flagship = next((s for s in scores if s["project_id"] == "PRJ-SUL-001"), None)
+    flagship = next((s for s in scores if s["project_id"] == FLAGSHIP_PROJECT_ID), None)
     report("s13", {
         "scored_stages": len(scores), "band_counts": band_counts,
         "median_lead_time_days": (

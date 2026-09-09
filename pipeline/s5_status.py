@@ -9,9 +9,13 @@ Output: data/intermediate/parcel_status.json
 import json
 import os
 
-from common import DATA_MID, report
-
-RANK = {"GREEN": 0, "AMBER": 1, "RED": 2}
+from common import (
+    DATA_MID,
+    FLAGSHIP_PARCEL_CLEAN,
+    FLAGSHIP_PARCEL_RED,
+    STATUS_RANK,
+    report,
+)
 
 
 def link_status(link, case):
@@ -56,7 +60,7 @@ def run():
                         "closed_history": False, "links": []})
             continue
         ls.sort(key=lambda x: -x["confidence_score"])
-        worst = max(ls, key=lambda x: (RANK[x["status"]], x["confidence_score"]))
+        worst = max(ls, key=lambda x: (STATUS_RANK[x["status"]], x["confidence_score"]))
         status = worst["status"]
         # PRD 30: a closed high-confidence link with nothing active is GREEN,
         # but the history is never hidden.
@@ -83,13 +87,13 @@ def run():
         json.dump(out, fh, indent=1)
 
     counts = {s: sum(1 for x in out if x["status"] == s) for s in ("RED", "AMBER", "GREEN")}
-    flag = next(x for x in out if x["parcel_id"] == "P-B01")
-    clean = next(x for x in out if x["parcel_id"] == "P-A01")
+    by_id = {x["parcel_id"]: x for x in out}
+    flag, clean = by_id[FLAGSHIP_PARCEL_RED], by_id[FLAGSHIP_PARCEL_CLEAN]
     report("s5", {
         "parcels": len(out), "status_counts": counts,
         "with_closed_history": sum(1 for x in out if x["closed_history"]),
-        "flagship_P-B01": flag["status"] + " @ " + str(flag["confidence"]),
-        "clean_P-A01": clean["status"],
+        "flagship_" + FLAGSHIP_PARCEL_RED: flag["status"] + " @ " + str(flag["confidence"]),
+        "clean_" + FLAGSHIP_PARCEL_CLEAN: clean["status"],
     })
 
 

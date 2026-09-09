@@ -20,15 +20,21 @@ after it - never a random shuffle of temporal data.
 
 Model: HistGradientBoostingClassifier(max_depth=3, max_leaf_nodes=8,
 l2_regularization=1.0) wrapped in CalibratedClassifierCV. Isotonic
-calibration needs >=200 closed rows; every stage in this corpus is well
-under that (34-90 train rows), so every stage legitimately falls back to
-sigmoid (Platt) calibration - a real, data-driven branch, not a hardcoded
-choice.
+calibration needs >=200 training rows and sigmoid (Platt) is used below
+that - a real, data-driven branch, not a hardcoded choice. On this corpus
+stages run 90-222 rows, so both branches are actually taken; the per-stage
+choice is recorded in `ModelRun` rather than assumed.
 
 Whichever of {base_rate, logistic_regression, hgb_calibrated} has the
 lowest Brier score on the holdout ships (`ModelRun.shipped=1`) for that
 stage. If base_rate wins, that is reported plainly, not hidden - it means
 the other two learned nothing generalizable for that stage in this corpus.
+
+Band thresholds: `t_high` is the lowest holdout probability that clears
+0.70 precision AND sits at or above the stage's own base rate. The base
+rate floor is what makes the band mean "elevated", not just "this stage
+usually overruns" - see `_select_thresholds`. A stage with no such cutoff
+suppresses HIGH outright rather than emitting a band it did not earn.
 
 Output: data/intermediate/model_runs.json, data/output/models/<stage>.joblib
 """
@@ -81,14 +87,31 @@ def _safe_auc(y_true, p, fn):
     return float(fn(y_true, p))
 
 
-def _select_thresholds(y_test, p_test):
-    """t_high = lowest p with holdout precision >= 0.70 (else HIGH is
-    suppressed entirely); t_med = lowest p with holdout recall >= 0.80."""
+def _select_thresholds(y_test, p_test, base_rate=None):
+    """t_high = lowest p that clears 0.70 holdout precision AND sits at or
+    above the stage's own base rate (else HIGH is suppressed entirely);
+    t_med = lowest p with holdout recall >= 0.80.
+
+    The base-rate floor is not a tuning knob, it is what makes the band
+    mean anything. A HIGH cut below the rate at which the stage overruns
+    anyway does not identify elevated risk - it fires on the ordinary
+    project. Worse, it is unexplainable by construction: the score is the
+    model's baseline plus each feature's contribution, so a row below the
+    baseline reached HIGH with every feature pushing risk DOWN, and the
+    officer saw a HIGH badge over five drivers that all argue for lower
+    risk (and, since recommendations only fire on risk-increasing drivers,
+    no recommended action either).
+
+    Every scoreable stage in this corpus picked such a cut - 0.315 against
+    a 0.417 base rate on compensation_disbursed, 0.239 against 0.250 on
+    award_3g_23 - so this was systematic, not one unlucky project."""
     if len(y_test) == 0 or len(set(y_test)) < 2:
         return {"high": "suppressed", "reason": "insufficient holdout diversity"}, None, None
     candidates = sorted(set(round(float(x), 3) for x in p_test))
     t_high = None
     for t in candidates:
+        if base_rate is not None and t < base_rate:
+            continue        # below the stage's own base rate - see docstring
         pred = (p_test >= t).astype(int)
         if pred.sum() == 0:
             continue
@@ -104,7 +127,9 @@ def _select_thresholds(y_test, p_test):
             t_med = t
             break
     if t_high is None:
-        thresholds = {"high": "suppressed"}
+        thresholds = {"high": "suppressed",
+                      "reason": "no cutoff at or above the stage base rate reached "
+                                f"precision >= {PRECISION_TARGET}"}
         if t_med is not None:
             thresholds["t_med"] = t_med
         return thresholds, None, t_med
@@ -113,34 +138,11 @@ def _select_thresholds(y_test, p_test):
     return {"t_high": t_high, "t_med": t_med}, t_high, t_med
 
 
-def _train_one_stage(stage, train, test, cutoff, groups=None):
-    X_train_raw, y_train = train[FEATURE_COLUMNS], train["is_delayed"].astype(int).values
-    X_test_raw, y_test = test[FEATURE_COLUMNS], test["is_delayed"].astype(int).values
-    X_train, medians = _impute(X_train_raw)
-    X_test, _ = _impute(X_test_raw, medians)
+def _fit_hgb(runs, X_train, y_train, groups, calibration, n_train):
+    """hgb_calibrated: shallow trees, strong L2, small-n discipline per spec.
 
-    n_train, n_test = len(X_train), len(X_test)
-    calibration = "isotonic" if n_train >= ISOTONIC_MIN_ROWS else "sigmoid"
-
-    runs = {}
-
-    # base_rate: predicts the train positive rate for every row.
-    base = DummyClassifier(strategy="prior", random_state=RISK_SEED)
-    base.fit(X_train, y_train)
-    runs["base_rate"] = base
-
-    # logistic_regression: standardised, L2.
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", ConvergenceWarning)
-        warnings.filterwarnings("ignore", message="Unknown solver options")
-        lr = make_pipeline(
-            StandardScaler(),
-            LogisticRegression(penalty="l2", max_iter=2000, random_state=RISK_SEED),
-        )
-        lr.fit(X_train, y_train)
-    runs["logistic_regression"] = lr
-
-    # hgb_calibrated: shallow trees, strong L2, small-n discipline per spec.
+    Leaves `runs` untouched when the stage is too small to stratify - the
+    caller then ships base_rate/logistic_regression for it and says so."""
     n_splits = 3 if min(np.bincount(y_train)) >= 3 else 2
     hgb = HistGradientBoostingClassifier(
         max_depth=3, max_leaf_nodes=8, l2_regularization=1.0,
@@ -164,7 +166,54 @@ def _train_one_stage(stage, train, test, cutoff, groups=None):
     except ValueError:
         # too few positives per fold even at n_splits=2 - stage too small
         # for a calibrated tree model; base_rate/LR still ship for it.
-        runs["hgb_calibrated"] = None
+        pass
+
+
+def _train_one_stage(stage, train, test, cutoff, groups=None):
+    X_train_raw, y_train = train[FEATURE_COLUMNS], train["is_delayed"].astype(int).values
+    X_test_raw, y_test = test[FEATURE_COLUMNS], test["is_delayed"].astype(int).values
+    X_train, medians = _impute(X_train_raw)
+    X_test, _ = _impute(X_test_raw, medians)
+
+    n_train, n_test = len(X_train), len(X_test)
+    calibration = "isotonic" if n_train >= ISOTONIC_MIN_ROWS else "sigmoid"
+
+    runs, untrainable = {}, []
+
+    # Nothing here can be fitted on an empty or single-class training split:
+    # DummyClassifier needs a sample, LogisticRegression needs two classes,
+    # and np.bincount([]).min() raises outright. A stage can legitimately
+    # land in either state on a small corpus (`possession` closes latest, so
+    # most of its stages fall on the far side of the cutoff), and it used to
+    # abort the whole build with an opaque ValueError several stages before
+    # the DB was written. Record it as an outcome instead - the same
+    # discipline this file already applies to base_rate winning.
+    n_classes = len(set(y_train.tolist()))
+    if n_train == 0:
+        untrainable.append("no stage closed on or before the cutoff: nothing to train on")
+    elif n_classes < 2:
+        untrainable.append(
+            f"only one outcome class in the training split (n_train={n_train}): "
+            "no classifier is identifiable, and a baseline over it would be a constant")
+
+    if not untrainable:
+        # base_rate: predicts the train positive rate for every row.
+        base = DummyClassifier(strategy="prior", random_state=RISK_SEED)
+        base.fit(X_train, y_train)
+        runs["base_rate"] = base
+
+        # logistic_regression: standardised, L2.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ConvergenceWarning)
+            warnings.filterwarnings("ignore", message="Unknown solver options")
+            lr = make_pipeline(
+                StandardScaler(),
+                LogisticRegression(penalty="l2", max_iter=2000, random_state=RISK_SEED),
+            )
+            lr.fit(X_train, y_train)
+        runs["logistic_regression"] = lr
+
+        _fit_hgb(runs, X_train, y_train, groups, calibration, n_train)
 
     results = {}
     for algo, model in runs.items():
@@ -185,9 +234,19 @@ def _train_one_stage(stage, train, test, cutoff, groups=None):
     # calibrated); base_rate winning is reported, not hidden.
     scored = {a: r["metrics"]["brier"] for a, r in results.items()
              if r["metrics"]["brier"] is not None}
-    shipped_algo = min(scored, key=scored.get) if scored else "base_rate"
+    if scored:
+        shipped_algo = min(scored, key=scored.get)
+    elif results:
+        shipped_algo = "base_rate" if "base_rate" in results else next(iter(results))
+    else:
+        # No model was fitted at all. Say "none" rather than name an algo
+        # that never ran: ModelRun.algo is what the model-history screen
+        # reads, and s13 finds no .joblib and skips the stage.
+        shipped_algo = "none"
     thresholds, t_high, t_med = _select_thresholds(
-        y_test, results[shipped_algo]["p_test"]) if shipped_algo in results else (
+        y_test, results[shipped_algo]["p_test"],
+        base_rate=float(y_train.mean()) if n_train else None,
+    ) if shipped_algo in results else (
         {"high": "suppressed", "reason": "no scoreable model"}, None, None)
 
     notes = ["n_test_real=0: no real acquisition dataset available in this "
@@ -199,6 +258,9 @@ def _train_one_stage(stage, train, test, cutoff, groups=None):
                      "than the naive prior on this corpus")
     if n_train < ISOTONIC_MIN_ROWS:
         notes.append(f"sigmoid calibration used: n_train={n_train} < {ISOTONIC_MIN_ROWS}")
+    notes.extend(untrainable)
+    if untrainable:
+        notes.append("no model ships for this stage; s13 leaves its open stages unscored")
 
     stage_report = {
         "stage": stage, "model_version": MODEL_VERSION,

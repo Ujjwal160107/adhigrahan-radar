@@ -6,6 +6,7 @@ driver to an action is decided once, here, by a human, not invented per
 request. Matched by feature name and the sign of its SHAP contribution
 (a feature only recommends an action when it is actually pushing risk up).
 """
+from s11_features import FEATURE_COLUMNS
 
 RULES = [
     {
@@ -64,16 +65,17 @@ RULES = [
                    "stalled administratively and request a status update "
                    "from the executing agency."),
     },
-    {
-        "rule_id": "R8-DISTRICT-CASELOAD",
-        "feature": "district_active_land_cases",
-        "action": ("The district carries a high volume of active land "
-                   "litigation. Consider whether district-level legal "
-                   "capacity needs reinforcement, not just this project."),
-    },
 ]
 
 _BY_FEATURE = {r["feature"]: r for r in RULES}
+
+# A rule keyed on a feature s11 does not emit can never fire, and nothing
+# says so: it reads like a live recommendation to whoever maintains this
+# table. R8-DISTRICT-CASELOAD was exactly that from the moment
+# `district_active_land_cases` was dropped from the feature matrix, which is
+# why this check exists rather than a note asking people to remember.
+_orphans = sorted(set(_BY_FEATURE) - set(FEATURE_COLUMNS))
+assert not _orphans, f"recommendation rules target features s11 does not emit: {_orphans}"
 
 # Below this |SHAP| magnitude a feature is not treated as an actionable
 # driver, only reported for transparency - retrieving a rule for noise

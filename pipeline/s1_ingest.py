@@ -9,7 +9,18 @@ import os
 
 import pandas as pd
 import pyarrow.parquet as pq
-from common import DATA_IN, DATA_MID, DISTRICT, FLAGSHIP_CNR, PROVENANCE, ContractError, report
+from common import (
+    DATA_IN,
+    DATA_MID,
+    DISTRICT,
+    FLAGSHIP_CNR,
+    FLAGSHIP_PARCEL_CLEAN,
+    FLAGSHIP_PARCEL_RED,
+    PROVENANCE,
+    TODAY,
+    ContractError,
+    report,
+)
 
 CASE_COLS = ["cnr", "case_no", "case_type", "court", "filing_date", "order_date",
              "next_hearing_date", "next_hearing_source", "is_final",
@@ -65,15 +76,19 @@ def run():
     # demo-critical rows (PRD 50). Without these the flagship cannot fire.
     if FLAGSHIP_CNR not in set(cases.cnr):
         raise ContractError("flagship case absent: " + FLAGSHIP_CNR)
-    for pid in ("P-A01", "P-B01"):
+    for pid in (FLAGSHIP_PARCEL_CLEAN, FLAGSHIP_PARCEL_RED):
         if pid not in set(parcels.parcel_id):
             raise ContractError("flagship parcel absent: " + pid)
 
     # contract requirement 3: a sale inside the flagship pendency window
     fl = cases[cases.cnr == FLAGSHIP_CNR].iloc[0]
-    pb = parcels[parcels.parcel_id == "P-B01"].iloc[0]
-    lo = pd.Timestamp(fl.filing_date)
-    hi = pd.Timestamp(fl.next_hearing_date) if fl.next_hearing_date else pd.Timestamp("2026-08-20")
+    pb = parcels[parcels.parcel_id == FLAGSHIP_PARCEL_RED].iloc[0]
+    # An active case's pendency window runs filing -> now, which is exactly
+    # the window s0 places the sale inside. next_hearing_date is a FUTURE
+    # listing, not the end of pendency: using it stretched this check ~70
+    # days past the contract it exists to enforce, so a sale placed outside
+    # the real window would still have passed.
+    lo, hi = pd.Timestamp(fl.filing_date), pd.Timestamp(TODAY)
     events = list(pb.land_events) if pb.land_events is not None else []
     sales = [e for e in events
              if e.get("type") == "sale" and lo <= pd.Timestamp(e["date"]) <= hi]
@@ -95,7 +110,7 @@ def run():
         "cases_with_relation": int(cases.extracted_relation.notna().sum()),
         "filing_span": [str(cases.filing_date.min()), str(cases.filing_date.max())],
         "max_pendency_years": round(
-            float((pd.Timestamp("2026-08-21") - pd.to_datetime(cases.filing_date).min()).days
+            float((pd.Timestamp(TODAY) - pd.to_datetime(cases.filing_date).min()).days
                   / 365.25), 2),
         "next_hearing_derived": int(cases.next_hearing_date.notna().sum()),
         "next_hearing_real": int((cases.next_hearing_source == "real").sum()),
