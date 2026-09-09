@@ -1,6 +1,7 @@
 import json
+
 from backend.db import get_conn, init_schema
-from backend.seed_stub import seed, FLAGSHIP_CNR
+from backend.seed_stub import FLAGSHIP_CNR, seed
 
 
 def make_db(tmp_path):

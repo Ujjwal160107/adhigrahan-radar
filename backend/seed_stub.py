@@ -1,7 +1,8 @@
 """Stub vivaad.db seeder in the REAL pipeline dialect (design doc §5b).
 Mirrors the real flagship IDs so stub tests and the real-DB gate agree."""
 import json
-from backend.db import get_conn, init_schema, db_path
+
+from backend.db import db_path, get_conn, init_schema
 
 FLAGSHIP_CNR = "UPHC020611812025"
 DISPOSED_CNR = "UPHC020412342024"
@@ -13,8 +14,10 @@ def seed(conn) -> None:
         "INSERT INTO Person (id,name,name_normalized,father_name,address,source_label)"
         " VALUES (?,?,?,?,?,?)",
         [
-            ("PR-001", "Ramesh Verma", "ramesh verma", "Sohan Lal", "Baraunsa, Sultanpur", "synthetic"),
-            ("PR-002", "Shyam Dhar Dubey", "shyam dhar dubey", "Santu", "Madanpur Panyar, Sultanpur", "synthetic"),
+            ("PR-001", "Ramesh Verma", "ramesh verma", "Sohan Lal",
+             "Baraunsa, Sultanpur", "synthetic"),
+            ("PR-002", "Shyam Dhar Dubey", "shyam dhar dubey", "Santu",
+             "Madanpur Panyar, Sultanpur", "synthetic"),
             ("PR-003", "Rakesh Kumar", "rakesh kumar", "Mahesh", "Kurwar, Sultanpur", "synthetic"),
         ],
     )
@@ -23,14 +26,16 @@ def seed(conn) -> None:
         [
             ("P-A01", "88", None, "KH-88", "Baraunsa", "baraunsa", "Sadar", "Sultanpur",
              "0.5 bigha", None,
-             json.dumps([{"event_type": "mutation", "date": "2023-06-10", "note": "Routine mutation"}]),
+             json.dumps([{"event_type": "mutation", "date": "2023-06-10",
+                          "note": "Routine mutation"}]),
              "PR-001", "GREEN", 0.0, None, 0, "synthetic"),
             ("P-B01", "1365-1", "1365-1", "KH-153", "Madanpur Panyar", "madanpur paniyar",
              "Sadar", "Sultanpur", "1 bigha",
              json.dumps({"type": "Polygon", "coordinates": [[
                  [82.07, 26.26], [82.08, 26.26], [82.08, 26.27], [82.07, 26.27], [82.07, 26.26]
              ]]}),
-             json.dumps([{"event_type": "sale", "date": "2025-11-05", "note": "Sale registered during pendency"}]),
+             json.dumps([{"event_type": "sale", "date": "2025-11-05",
+                          "note": "Sale registered during pendency"}]),
              "PR-002", "RED", 0.9105, "Sale registered during pendency", 0, "synthetic"),
             ("P-C01", "142/3", None, "KH-142", "Kurwar", "kurwar", "Sadar", "Sultanpur",
              "0.8 bigha", None, json.dumps([]),

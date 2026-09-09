@@ -7,9 +7,10 @@ interface WatchlistProps {
   onBack: () => void;
   onOpenDashboard: () => void;
   onOpenParcel: (parcelId: string) => Promise<void>;
+  onOpenProject?: (projectId: string) => void;
 }
 
-export const Watchlist: React.FC<WatchlistProps> = ({ onBack, onOpenDashboard, onOpenParcel }) => {
+export const Watchlist: React.FC<WatchlistProps> = ({ onBack, onOpenDashboard, onOpenParcel, onOpenProject }) => {
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -34,13 +35,18 @@ export const Watchlist: React.FC<WatchlistProps> = ({ onBack, onOpenDashboard, o
     };
   }, []);
 
-  const handleOpen = async (parcelId: string) => {
+  const handleOpen = async (item: WatchlistItem) => {
+    const key = item.parcel_id || item.project_id || String(item.id);
     if (busyId) return;
-    setBusyId(parcelId);
+    setBusyId(key);
     try {
-      await onOpenParcel(parcelId);
+      if (item.parcel_id) {
+        await onOpenParcel(item.parcel_id);
+      } else if (item.project_id && onOpenProject) {
+        onOpenProject(item.project_id);
+      }
     } catch {
-      setError('Could not open that parcel.');
+      setError('Could not open that record.');
       setBusyId(null);
     }
   };
@@ -64,7 +70,8 @@ export const Watchlist: React.FC<WatchlistProps> = ({ onBack, onOpenDashboard, o
       </div>
 
       <p className="font-mono text-sm text-ink-muted mb-6 max-w-3xl">
-        Subscriptions are stored against this demo officer. The update stamp is a scripted flag — not a live court notification.
+        Subscriptions are stored against this demo officer. Update notifications are not yet
+        implemented — the "update" column exists in the schema but nothing currently sets it.
       </p>
 
       {error ? (
@@ -78,40 +85,45 @@ export const Watchlist: React.FC<WatchlistProps> = ({ onBack, onOpenDashboard, o
           <div className="p-8 font-mono text-sm text-ink-muted">Reading subscriptions…</div>
         ) : items.length === 0 ? (
           <div className="p-8 font-mono text-sm text-ink-muted space-y-2">
-            <p>No parcels on the watchlist yet.</p>
-            <p>Open a result and use <span className="text-black font-bold">Monitor this Parcel</span>.</p>
+            <p>Nothing on the watchlist yet.</p>
+            <p>Open a result or project and use <span className="text-black font-bold">Monitor</span>.</p>
           </div>
         ) : (
-          items.map((item, idx) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => handleOpen(item.parcel_id)}
-              disabled={Boolean(busyId)}
-              className={`w-full text-left p-5 sm:p-6 font-mono text-sm flex flex-wrap items-center justify-between gap-4 hover:bg-paper-light cursor-pointer disabled:cursor-wait ${
-                idx < items.length - 1 ? 'border-b-2 border-black' : ''
-              }`}
-            >
-              <div>
-                <div className="text-black font-bold">
-                  Survey {item.survey_no} · {item.village}
+          items.map((item, idx) => {
+            const key = item.parcel_id || item.project_id || String(item.id);
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleOpen(item)}
+                disabled={Boolean(busyId)}
+                className={`w-full text-left p-5 sm:p-6 font-mono text-sm flex flex-wrap items-center justify-between gap-4 hover:bg-paper-light cursor-pointer disabled:cursor-wait ${
+                  idx < items.length - 1 ? 'border-b-2 border-black' : ''
+                }`}
+              >
+                <div>
+                  <div className="text-black font-bold">
+                    {item.parcel_id
+                      ? `Survey ${item.survey_no} · ${item.village}`
+                      : item.project_name}
+                  </div>
+                  <div className="text-ink-muted text-xs mt-1">
+                    Subscribed {item.subscribed_at} · {key}
+                  </div>
                 </div>
-                <div className="text-ink-muted text-xs mt-1">
-                  Subscribed {item.subscribed_at} · {item.parcel_id}
+                <div className="flex items-center gap-4 flex-shrink-0">
+                  {item.has_update ? (
+                    <span className="border-2 border-black bg-[#FEF3C7] text-black px-2 py-1 text-[10px] uppercase font-bold tracking-wider">
+                      Update
+                    </span>
+                  ) : (
+                    <span className="text-ink-muted text-xs uppercase">Quiet</span>
+                  )}
+                  <span className="font-bold">{busyId === key ? 'Opening…' : 'Open →'}</span>
                 </div>
-              </div>
-              <div className="flex items-center gap-4 flex-shrink-0">
-                {item.has_update ? (
-                  <span className="border-2 border-black bg-[#FEF3C7] text-black px-2 py-1 text-[10px] uppercase font-bold tracking-wider">
-                    Order update
-                  </span>
-                ) : (
-                  <span className="text-ink-muted text-xs uppercase">Quiet</span>
-                )}
-                <span className="font-bold">{busyId === item.parcel_id ? 'Opening…' : 'Open →'}</span>
-              </div>
-            </button>
-          ))
+              </button>
+            );
+          })
         )}
       </div>
 

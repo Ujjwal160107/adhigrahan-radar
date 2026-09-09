@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+
 from backend.db import get_conn, init_schema
 from backend.seed_stub import seed
 

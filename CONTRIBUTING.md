@@ -3,13 +3,14 @@
 ## Running it
 
 ```bash
+make doctor    # verify toolchain versions before installing
 make setup     # venv + pip + npm
-make build     # regenerate data/output from data/input
-make test      # 47 tests must stay green
+make build     # regenerate data/output from data/input (s0-s15)
+make test      # 108 backend/pipeline tests + 22 frontend tests must stay green
 ```
 
-`make test` is the gate. The linkage engine is finished and its behaviour is pinned by a
-golden suite; if a change turns any of those 47 red, the change is wrong until proven
+`make test` is the gate. Both the linkage engine and the risk engine are built and pinned by
+golden suites; if a change turns any of those tests red, the change is wrong until proven
 otherwise.
 
 ## Where things go

@@ -1,8 +1,9 @@
 import json
 
 from fastapi import APIRouter, HTTPException
+
 from backend.db import get_conn
-from backend.normalize import norm_survey, norm_place
+from backend.normalize import norm_place, norm_survey
 
 router = APIRouter(prefix="/parcels", tags=["parcels"])
 
@@ -47,9 +48,15 @@ def detail(parcel_id: str):
     body["owner"] = dict(owner) if owner else None
     for col in ("geometry", "land_events"):
         try:
-            body[col] = json.loads(body[col]) if body[col] else ([] if col == "land_events" else None)
+            body[col] = (
+                json.loads(body[col]) if body[col] else ([] if col == "land_events" else None)
+            )
         except (TypeError, ValueError):
             pass  # serve the raw value rather than 500 on foreign data
+    body["projects"] = [dict(pr) for pr in conn.execute(
+        """SELECT ap.id, ap.name, pp.binding_confidence
+           FROM ProjectParcel pp JOIN AcquisitionProject ap ON ap.id = pp.project_id
+           WHERE pp.parcel_id=?""", (parcel_id,))]
     return body
 
 

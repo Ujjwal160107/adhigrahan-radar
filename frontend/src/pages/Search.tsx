@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppFooter } from '../components/AppFooter';
+import { api } from '../api/client';
+import { StatusBand } from '../types/api';
 
 interface SearchProps {
   onSearch: (surveyNo: string, village: string) => void;
@@ -7,20 +9,72 @@ interface SearchProps {
   onOpenWatchlist?: () => void;
 }
 
+interface QuickPick {
+  survey_no: string;
+  village: string;
+  status: StatusBand;
+  confidence: number | null;
+}
+
+const BAND_LABEL: Record<StatusBand, string> = {
+  RED: 'Active litigation',
+  AMBER: 'Possible connection',
+  GREEN: 'Clean record',
+};
+
+const BAND_DOT: Record<StatusBand, string> = {
+  RED: 'bg-radar-red',
+  AMBER: 'bg-radar-amber',
+  GREEN: 'bg-radar-green',
+};
+
 export const Search: React.FC<SearchProps> = ({ onSearch, onOpenDashboard, onOpenWatchlist }) => {
   const [surveyNo, setSurveyNo] = useState('');
   const [village, setVillage] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
+  // Quick-select shortcuts are derived from the live index, not hand-typed:
+  // one real example per status band, picked by confidence.
+  const [quickPicks, setQuickPicks] = useState<QuickPick[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getMap()
+      .then((map) => {
+        if (cancelled) return;
+        const byBand: Partial<Record<StatusBand, QuickPick>> = {};
+        for (const f of map.features) {
+          const band = f.properties.status;
+          const candidate: QuickPick = {
+            survey_no: f.properties.survey_no,
+            village: f.properties.village,
+            status: band,
+            confidence: f.properties.confidence,
+          };
+          const existing = byBand[band];
+          if (!existing || (candidate.confidence ?? 0) > (existing.confidence ?? 0)) {
+            byBand[band] = candidate;
+          }
+        }
+        setQuickPicks((['RED', 'AMBER', 'GREEN'] as StatusBand[])
+          .map((b) => byBand[b])
+          .filter((p): p is QuickPick => Boolean(p)));
+      })
+      .catch(() => { if (!cancelled) setQuickPicks([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!surveyNo.trim() && !village.trim()) {
-      onSearch('1365/1', 'Madanpur Paniyar');
+      setValidationError('Enter a survey number or a village to search.');
       return;
     }
+    setValidationError(null);
     onSearch(surveyNo.trim(), village.trim());
   };
 
   const handleQuickPick = (quickSurvey: string, quickVillage: string) => {
+    setValidationError(null);
     setSurveyNo(quickSurvey);
     setVillage(quickVillage);
     onSearch(quickSurvey, quickVillage);
@@ -41,6 +95,7 @@ export const Search: React.FC<SearchProps> = ({ onSearch, onOpenDashboard, onOpe
             {/* Survey / Gata Input */}
             <input
               type="text"
+              aria-label="Survey or gata number"
               value={surveyNo}
               onChange={(e) => setSurveyNo(e.target.value)}
               placeholder="Survey / Gata Number..."
@@ -50,6 +105,7 @@ export const Search: React.FC<SearchProps> = ({ onSearch, onOpenDashboard, onOpe
             {/* Village Input */}
             <input
               type="text"
+              aria-label="Village"
               value={village}
               onChange={(e) => setVillage(e.target.value)}
               placeholder="Village..."
@@ -80,40 +136,28 @@ export const Search: React.FC<SearchProps> = ({ onSearch, onOpenDashboard, onOpe
           </div>
         </form>
 
-        {/* Curated Demo Shortcuts in a single line without wrapping */}
-        <div className="mt-8 flex flex-nowrap items-center gap-3 text-xs font-mono text-ink-muted w-full sm:w-[70vw] max-w-5xl overflow-x-auto whitespace-nowrap py-1">
-          <span className="uppercase text-ink-subtle tracking-wider flex-shrink-0">Demo quick-select:</span>
-          
-          <button
-            type="button"
-            onClick={() => handleQuickPick('1365/1', 'Madanpur Paniyar')}
-            className="border border-black/40 hover:border-black bg-paper-light hover:bg-white px-3 py-1.5 text-black transition-colors flex items-center gap-2 flex-shrink-0"
-          >
-            <span className="w-2 h-2 rounded-full bg-radar-red"></span>
-            <span>1365/1 (Madanpur Paniyar)</span>
-            <span className="text-[10px] text-ink-muted uppercase font-semibold">[Flagship RED]</span>
-          </button>
+        {validationError ? (
+          <p role="alert" className="mt-3 font-mono text-xs text-radar-red">{validationError}</p>
+        ) : null}
 
-          <button
-            type="button"
-            onClick={() => handleQuickPick('418', 'Madanpur Paniyar')}
-            className="border border-black/40 hover:border-black bg-paper-light hover:bg-white px-3 py-1.5 text-black transition-colors flex items-center gap-2 flex-shrink-0"
-          >
-            <span className="w-2 h-2 rounded-full bg-radar-green"></span>
-            <span>418 (Madanpur Paniyar)</span>
-            <span className="text-[10px] text-ink-muted uppercase font-semibold">[Clean GREEN]</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickPick('622', 'Sonari')}
-            className="border border-black/40 hover:border-black bg-paper-light hover:bg-white px-3 py-1.5 text-black transition-colors flex items-center gap-2 flex-shrink-0"
-          >
-            <span className="w-2 h-2 rounded-full bg-radar-amber"></span>
-            <span>622 (Sonari)</span>
-            <span className="text-[10px] text-ink-muted uppercase font-semibold">[Disposed AMBER]</span>
-          </button>
-        </div>
+        {/* Quick-select shortcuts, one real example per status band from the live index */}
+        {quickPicks.length > 0 && (
+          <div className="mt-8 flex flex-nowrap items-center gap-3 text-xs font-mono text-ink-muted w-full sm:w-[70vw] max-w-5xl overflow-x-auto whitespace-nowrap py-1">
+            <span className="uppercase text-ink-subtle tracking-wider flex-shrink-0">Try an example:</span>
+            {quickPicks.map((p) => (
+              <button
+                key={`${p.survey_no}-${p.village}`}
+                type="button"
+                onClick={() => handleQuickPick(p.survey_no, p.village)}
+                className="border border-black/40 hover:border-black bg-paper-light hover:bg-white px-3 py-1.5 text-black transition-colors flex items-center gap-2 flex-shrink-0"
+              >
+                <span className={`w-2 h-2 rounded-full ${BAND_DOT[p.status]}`}></span>
+                <span>{p.survey_no} ({p.village})</span>
+                <span className="text-[10px] text-ink-muted uppercase font-semibold">[{BAND_LABEL[p.status]}]</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <AppFooter

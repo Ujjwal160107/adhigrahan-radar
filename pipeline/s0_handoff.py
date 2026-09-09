@@ -21,7 +21,6 @@ import random
 
 import pandas as pd
 import pyarrow.parquet as pq
-
 from common import DATA_IN, DISTRICT, FLAGSHIP_CNR, SEED, report
 
 SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
@@ -99,8 +98,7 @@ def _events(rng, inside=None):
     for _ in range(rng.randint(0, 2)):
         y = rng.randint(2012, 2023)
         ev.append({"type": rng.choice(["sale", "mutation"]),
-                   "date": "%04d-%02d-%02d" % (y, rng.randint(1, 12),
-                                               rng.randint(1, 28))})
+                   "date": f"{y:04d}-{rng.randint(1, 12):02d}-{rng.randint(1, 28):02d}"})
     return sorted(ev, key=lambda e: e["date"])
 
 
@@ -211,7 +209,7 @@ def build():
     cases.to_parquet(os.path.join(DATA_IN, "cases.parquet"), index=False)
 
     # ---- parcels.parquet: synthetic land side ------------------------------
-    lead = dict(zip(cases.cnr, cases.petitioner_raw.map(_first_party)))
+    lead = dict(zip(cases.cnr, cases.petitioner_raw.map(_first_party), strict=True))
     # Pendency window per case, so a parcel seeded from a case can carry a sale
     # registered while that case was running. Without this only the flagship
     # shows lis pendens and the pattern reads as one lucky row rather than a
@@ -223,7 +221,7 @@ def build():
     prows = []
 
     def add(**kw):
-        base = {"parcel_id": "P-%03d" % (len(prows) + 1), "district": DISTRICT,
+        base = {"parcel_id": f"P-{len(prows) + 1:03d}", "district": DISTRICT,
                 "source_label": "synthetic", "geometry": json.dumps(_poly(rng)),
                 "land_events": _events(rng)}
         base.update(kw)

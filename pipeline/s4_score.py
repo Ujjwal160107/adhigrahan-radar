@@ -18,9 +18,8 @@ Output: data/intermediate/links.json
 import json
 import os
 
-from rapidfuzz import fuzz
-
 from common import CASE_TYPE_RELEVANCE, DATA_MID, HIGH, MEDIUM, WEIGHTS, report
+from rapidfuzz import fuzz
 
 
 def _identifier(case_surveys, parcel_surveys):
@@ -83,6 +82,7 @@ def score_pair(case, parcel):
                                    if feats["father_name"] is not None else None),
         "village_match": feats["village"] == 1.0,
         "taluk_match": feats["village"] == 0.5,
+        "case_village": case.get("village_canon"),
         "case_type_relevance": feats["case_type"],
         "weights_used": {k: WEIGHTS[k] for k in present},
         "features_absent": [k for k in feats if feats[k] is None],

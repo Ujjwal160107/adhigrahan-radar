@@ -15,6 +15,7 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
+      - run: ruff check .
       # The build must succeed from the committed contract alone. If this step
       # fails, a fresh clone is broken and the demo has no database.
       - run: python pipeline/run_all.py --skip-handoff
@@ -30,6 +31,10 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+        working-directory: frontend
+      - run: npx tsc --noEmit
+        working-directory: frontend
+      - run: npm test
         working-directory: frontend
       - run: npm run build
         working-directory: frontend

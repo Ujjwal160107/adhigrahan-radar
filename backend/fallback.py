@@ -1,7 +1,9 @@
 import logging
 import os
 from pathlib import Path
+
 from starlette.responses import JSONResponse, Response
+
 from backend.db import REPO_ROOT
 
 logger = logging.getLogger("vivaad.fallback")

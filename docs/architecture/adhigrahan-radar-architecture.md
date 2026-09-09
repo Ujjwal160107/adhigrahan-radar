@@ -1,7 +1,9 @@
 # Adhigrahan Radar — System Architecture
 
-**Date:** 2026-08-30
-**Status:** Design approved; implementation not started
+**Date:** 2026-08-30 (design) · updated 2026-09-09 (build)
+**Status:** Built. Offline pipeline s0-s15, 15-table SQLite store, 19 API endpoints, full
+risk-engine frontend. See the root README and `docs/plans/2026-09-09-adhigrahan-radar-
+implementation-blueprint.md` for what changed since the design below and why.
 **Problem statement:** SIH26017 — *Predictive Analytics System for Early Detection of Land
 Acquisition Delays*. Ministry of Rural Development, Dept. of Land Resources. Software.
 **Design spec:** `docs/specs/2026-08-30-sih26017-acquisition-delay-design.md`
@@ -34,7 +36,7 @@ those sources together and puts a calibrated probability on the stall.*
 | Output | GREEN / AMBER / RED + evidence | Delay probability + risk band + drivers + action |
 | Method | Deterministic rules + fuzzy record linkage | Calibrated supervised classification |
 | User | (was buyer) now internal drill-down | District officer, CALA, policymaker |
-| Status | Built, 47 tests green | Designed |
+| Status | Built, 44 tests green | Built, 64 tests green |
 
 ---
 
@@ -42,9 +44,10 @@ those sources together and puts a calibrated probability on the stall.*
 
 ```
 ┌── SOURCES ──────────────────────────────────────────────────────────────┐
-│  Allahabad HC order corpus (REAL)        Bhoomi Rashi 3A/3D (REAL,      │
-│  38 cases, Sultanpur                     cached snapshot, ≥8 UP dists)  │
-│  Synthetic land parcels (LABELLED)       Synthetic projects (LABELLED)  │
+│  Allahabad HC order corpus (REAL)        No real Bhoomi Rashi snapshot  │
+│  38 cases, Sultanpur                     available (data/raw/ empty) - │
+│  Synthetic land parcels (LABELLED)       acquisition side fully        │
+│                                           SYNTHETIC, RISK_SEED-driven   │
 └─────────────────────────────┬───────────────────────────────────────────┘
                               │
 ┌── OFFLINE BUILD ────────────▼───────────────────────────────────────────┐
@@ -55,13 +58,13 @@ those sources together and puts a calibrated probability on the stall.*
 └─────────────────────────────┬───────────────────────────────────────────┘
                               │      ══ OFFLINE BOUNDARY ══
 ┌── SERVING ──────────────────▼───────────────────────────────────────────┐
-│  vivaad.db (13 tables, everything precomputed)                          │
-│  FastAPI — 14 endpoints, every one a SELECT. No model in the request    │
+│  vivaad.db (15 tables, everything precomputed)                          │
+│  FastAPI — 19 endpoints, every one a SELECT. No model in the request    │
 │  path. Fallback middleware serves cached JSON at the same URLs.         │
 └─────────────────────────────┬───────────────────────────────────────────┘
                               │
 ┌── UI ───────────────────────▼───────────────────────────────────────────┐
-│  RiskDashboard ▸ ProjectPortfolio ▸ ProjectDetail                        │
+│  RiskDashboard ▸ ProjectPortfolio ▸ ProjectDetail ▸ ModelHistory         │
 │                        └─ driver panel ─▶ parcel evidence (Vivaad)      │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -87,7 +90,7 @@ endpoints to the same API.
 
 ---
 
-## 4. Data model — 13 tables
+## 4. Data model — 15 tables
 
 ### 4.1 Existing eight (Vivaad Radar, unchanged)
 
@@ -96,8 +99,9 @@ endpoints to the same API.
 
 `Parcel.status` / `.confidence` are precomputed by `s5`. `ParcelCaseLink.evidence` is the
 JSON the methodology panel renders. Neither is recomputed at query time.
+`Watchlist` gained a nullable `project_id` column (§4.2 below).
 
-### 4.2 New five (Adhigrahan Radar)
+### 4.2 New six (Adhigrahan Radar) + AuditLog
 
 | Table | Holds | Grain |
 |---|---|---|
@@ -105,9 +109,13 @@ JSON the methodology panel renders. Neither is recomputed at query time.
 | `ProjectStage` | Stage clocks: statutory days, start, completion, overdue, delay label | one (project, stage) |
 | `ProjectParcel` | Project→parcel binding with confidence and evidence | one (project, parcel) |
 | `ProjectRisk` | Delay probability, band, drivers, recommendations, model version | one (project, stage) |
-| `ModelRun` | Model registry: algo, split, metrics, thresholds, feature list | one training run |
+| `ModelRun` | Model registry: algo, split, metrics, thresholds, feature list | one (model_version, stage) |
+| `Intervention` | Officer-recorded follow-up action, with a risk-band snapshot | one recorded action |
 
-`AuditLog` is a conditional fourteenth table, present only if the role stub is built.
+`AuditLog` is the fifteenth table: append-only, written by `backend/auth.py` on every
+request, never touched by the pipeline. The predecessor design's "13 tables" figure did not
+account for `Intervention` (needed for the officer workflow's "record an action" step) or the
+always-built `AuditLog`; both are built and this is the corrected count.
 
 ### 4.3 Two deliberate echoes
 
@@ -148,17 +156,19 @@ unlabelled fabricated deadline is the cheapest possible credibility loss.
 
 ## 6. Serving layer
 
-### 6.1 Endpoints — 8 existing + 6 new
+### 6.1 Endpoints — 19 total (7 existing + 12 new)
 
 | Existing (Vivaad) | New (Adhigrahan) |
 |---|---|
-| `GET /parcels/search` | `GET /projects` |
+| `GET /parcels/search` | `GET /projects` (filter/sort/paginate) |
 | `GET /parcels/{id}` | `GET /projects/{id}` |
 | `GET /parcels/{id}/litigation` | `GET /projects/{id}/risk` |
-| `GET /cases/{id}` | `GET /dashboard/risk` |
-| `GET /dashboard/overview` | `GET /dashboard/risk-map` |
-| `GET /dashboard/heatmap` | `GET /models/history` |
-| `POST /watchlist` · `GET /watchlist` | *(extended to accept `project_id`)* |
+| `GET /cases/{id}` | `GET /projects/{id}/parcels` |
+| `GET /dashboard/overview` | `GET /projects/{id}/interventions` (GET + POST) |
+| `GET /dashboard/heatmap` | `GET /dashboard/risk` |
+| `GET /dashboard/map` | `GET /dashboard/risk-map` |
+| `POST /watchlist` · `GET /watchlist` *(extended to accept `project_id`)* | `GET /models/history` |
+| | `GET /auth/session` |
 
 Every endpoint is a `SELECT` plus JSON shaping. No scoring, no model load, no SHAP at
 request time.
@@ -175,12 +185,15 @@ Unchanged from the predecessor design and extended to the new routes.
 
 No tier touches the network during a demo.
 
-### 6.3 Access model (conditional)
+### 6.3 Access model
 
-An `X-Role` header (`officer | policymaker | viewer`) gates response fields; an append-only
-`AuditLog` records every request. **Explicitly a mocked access model, not a security
-system**, labelled as such on screen. It exists because the problem statement names it; it
-is first on the cut list.
+An `X-Role` header (`officer` default, `district_officer`, `reviewer`, `admin`) resolved by
+`current_role()` gates writes: `reviewer` is read-only by design (`WRITE_ROLES` excludes it),
+every other role can write. An append-only `AuditLog` table records every request's role,
+method, path, status, and timestamp, written by outermost middleware in `main.py` so it never
+misses a request the router layer sees. **Explicitly a demo-grade access model, not
+authentication** — there is no password, session, or token, and any client can claim any role
+by setting the header — labelled `auth_mode: "demo_role_header"` in `/auth/session`.
 
 ---
 
@@ -188,11 +201,12 @@ is first on the cut list.
 
 | Screen | Route | Purpose |
 |---|---|---|
-| `RiskDashboard` | `/risk` | State and district rollups, delay trends, corridor map |
-| `ProjectPortfolio` | `/projects` | Projects ranked by delay probability, filterable |
-| `ProjectDetail` | `/projects/:id` | Stage timeline, per-stage risk, drivers, actions |
-| `Result` *(existing)* | `/parcel/:id` | Reached from the driver panel: why this parcel is a driver |
-| `Search`, `Watchlist`, `OfficerDashboard` *(existing)* | — | Retained, reframed for officers |
+| `RiskDashboard` | `/` | State/district rollups, risk-band counts, officer heatmap, watchlist |
+| `ProjectPortfolio` | `/projects` | Projects ranked by delay probability, server-filtered/paginated |
+| `ProjectDetail` | `/projects/:id` | Stage timeline, per-stage risk, drivers, recommendations, intervention form |
+| `ModelHistory` | `/models` | Model registry: shipped algo, metrics, baselines per stage |
+| `LookupApp` *(existing linkage UI)* | `/lookup`, `/lookup/parcel/:id` | Parcel search, case/litigation drill-down |
+| `Watchlist` *(existing)* | `/watchlist` | Retained, extended to project subscriptions |
 
 ### 7.1 `Timeline.tsx` — the component that carries the story
 
@@ -221,14 +235,15 @@ Every row in the build carries a label from the PRD §21 set: `real`, `synthetic
 | Layer | Provenance |
 |---|---|
 | Court cases, orders, CNRs | `real` |
-| Bhoomi Rashi projects and notification dates | `real` (cached snapshot) |
-| Land parcels, synthetic projects | `synthetic` |
+| Acquisition projects, stages, notification dates | `synthetic` — no real Bhoomi Rashi snapshot is available in this environment (`data/raw/bhoomirashi/` is an empty placeholder); see `pipeline/README.md` deviation 5 |
+| Land parcels | `synthetic` |
 | Link scores, parcel status, delay labels | `derived` |
 | Delay probabilities, SHAP drivers | `model_generated` |
-| Alerts and notifications | `mocked` |
+| Alerts and notifications | not built — no notification/alert feature exists in this system |
 
 **Hard rule: no `synthetic` row contributes to any metric shown to a judge.** Synthetic rows
-may train; only real rows may score.
+may train; only real rows may score (`n_test_real=0` for every stage today, and every
+`ModelRun.notes` says so).
 
 ---
 
@@ -246,11 +261,11 @@ does not create, correct, or adjudicate any record.
 
 ---
 
-## 10. Open items
+## 10. Status of the open items above
 
-| Item | Resolve by |
+| Item | Resolution |
 |---|---|
-| Bhoomi Rashi snapshot size and district spread actually obtainable | Before `s12` — it sets `n_train` and therefore whether GBM or LR ships |
-| Whether the role stub and `AuditLog` survive the timebox | Cut-list decision at build time |
-| Excalidraw regeneration (`vivaad-radar-architecture`, new `adhigrahan-ml-pipeline`) | Pending |
-| PRD Part 16, `CONTEXT` §11, `DESIGN_GUIDELINES` risk tokens, PS traceability doc | Pending |
+| Bhoomi Rashi snapshot size and district spread | Never became available in this environment. `s8` generates the acquisition contract deterministically from `RISK_SEED` instead, fully disclosed as `synthetic`. `n_train` is 34-90 rows/stage; the model discipline in `pipeline/README.md` deviation 6 (20-feature cap, shallow trees, LR/HGB/base-rate comparison) exists because of this. |
+| Role stub and `AuditLog` | Both built: `backend/auth.py`, `backend/routers/auth.py`, outermost audit middleware in `main.py`. |
+| Excalidraw regeneration | Still pending; `make diagrams` regenerates the two `.excalidraw` files from the current schema/pipeline when run. |
+| PRD Part 16, `CONTEXT` §11, `DESIGN_GUIDELINES` risk tokens, PS traceability doc | `DESIGN_GUIDELINES.md` §3 now documents the risk-band tokens; see that file for the current state of each remaining item. |

@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo } from 'react';
-import { CircleMarker, GeoJSON as LeafletGeoJSON, MapContainer, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import { CircleMarker, GeoJSON as LeafletGeoJSON, MapContainer, Tooltip, useMap } from 'react-leaflet';
 import type { Layer } from 'leaflet';
 import type { Feature, GeoJsonObject } from 'geojson';
 import 'leaflet/dist/leaflet.css';
 import { ParcelMapFeature, ParcelMapResponse, StatusBand, VillageDensity } from '../types/api';
 
-const SULTANPUR: [number, number] = [26.2647, 82.0727];
+// Used only before the first fitBounds() and when a district has zero
+// mapped features — never asserted as the location of real data.
+const FALLBACK_CENTER: [number, number] = [22.9734, 78.6569];
 
 const FILL: Record<StatusBand, string> = {
   RED: '#C92A2A',
@@ -62,7 +64,7 @@ function MapEffects({
       : features;
     const pts = subset.map(featureCentroid).filter(Boolean) as [number, number][];
     if (pts.length === 0) {
-      map.setView(SULTANPUR, 11);
+      map.setView(FALLBACK_CENTER, 5);
       return;
     }
     map.fitBounds(pts, { padding: [28, 28], maxZoom: selectedCanon ? 14 : 12 });
@@ -142,16 +144,16 @@ export const ParcelMap: React.FC<ParcelMapProps> = ({
   return (
     <div className="relative w-full h-[520px] bg-paper-dark">
       <MapContainer
-        center={SULTANPUR}
+        center={FALLBACK_CENTER}
         zoom={11}
         className="h-full w-full"
         zoomControl
         scrollWheelZoom
       >
-        <TileLayer
-          attribution='&copy; OpenStreetMap'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        />
+        {/* No external tile layer: parcel geometry is synthetic/schematic, and
+            the reliability guarantee is that this map never touches the
+            network. A plain canvas is more honest than tiles implying a
+            precision the underlying data does not have. */}
         <MapEffects features={features} selectedCanon={selectedCanon} />
         {villagePoints.map((v) => (
           <CircleMarker
@@ -181,6 +183,9 @@ export const ParcelMap: React.FC<ParcelMapProps> = ({
         />
       </MapContainer>
 
+      <div className="absolute top-3 left-3 z-[1000] border-2 border-black bg-white/95 font-mono text-[10px] uppercase tracking-wider px-2.5 py-1.5">
+        Schematic view — parcel boundaries are synthetic, not surveyed geometry
+      </div>
       <div className="absolute bottom-3 left-3 z-[1000] border-2 border-black bg-white/95 font-mono text-[10px] uppercase tracking-wider p-2.5 space-y-1">
         <div className="flex items-center gap-2"><span className="w-3 h-3 bg-radar-red" /> RED · active link</div>
         <div className="flex items-center gap-2"><span className="w-3 h-3 bg-radar-amber" /> AMBER · verify</div>

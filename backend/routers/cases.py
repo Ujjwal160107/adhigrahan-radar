@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+
 from backend.db import get_conn
 from backend.routers.parcels import NOT_FOUND
 
@@ -20,4 +21,10 @@ def detail(case_id: str):
     body["linked_parcels"] = [dict(r) for r in conn.execute(
         "SELECT parcel_id, confidence_score, status FROM ParcelCaseLink"
         " WHERE case_id=? ORDER BY confidence_score DESC", (case_id,))]
+    body["affected_projects"] = [dict(r) for r in conn.execute(
+        """SELECT DISTINCT ap.id AS project_id, ap.name, ap.district
+           FROM ParcelCaseLink l
+           JOIN ProjectParcel pp ON pp.parcel_id = l.parcel_id
+           JOIN AcquisitionProject ap ON ap.id = pp.project_id
+           WHERE l.case_id=?""", (case_id,))]
     return body

@@ -20,6 +20,17 @@ dist/
 data/intermediate/
 data/output/*
 !data/output/.gitkeep
+# s0's linkage-engine parquets ARE committed (the data contract; s0 itself
+# needs an external corpus not in this repo). s8's acquisition parquets are
+# NOT: s8 has no external dependency and regenerates byte-identical output
+# from RISK_SEED on every build, so freezing a copy would only risk drift
+# between the generator and a stale snapshot.
+data/input/acquisitions.parquet
+data/input/project_stages.parquet
+# s11's feature matrix is an ML-internal artifact placed in data/input/ only
+# so pipeline paths stay simple; it is not part of the DB contract (s6/s14
+# never read it) and regenerates byte-identical from RISK_SEED every build.
+data/input/features.parquet
 # Trained models ARE committed: they are small, and a fresh clone must be able
 # to serve without retraining (design spec s12).
 !data/output/models/
