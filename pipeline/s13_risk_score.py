@@ -156,10 +156,19 @@ def run():
         ["project_id", "stage", "started_on", "completed_on", "statutory_days"]]
     df = df.merge(stage_meta, on=["project_id", "stage"], how="left")
 
+    # A closed stage now contributes one row per statutory landmark it
+    # survived to. Those rows are not independent stages: keep only the
+    # latest landmark of each, so the empirical overrun lookup and the SHAP
+    # background weight every historical stage exactly once instead of
+    # over-weighting the stages that happened to survive more landmarks.
+    closed_latest = (df[~df.is_serving_row]
+                     .sort_values("landmark_fraction")
+                     .drop_duplicates(subset=["project_id", "stage"], keep="last"))
+
     scores = []
     for stage in df.stage.unique():
-        open_rows = df[(df.stage == stage) & (df.is_censored)]
-        closed_rows = df[(df.stage == stage) & (~df.is_censored)]
+        open_rows = df[(df.stage == stage) & (df.is_serving_row)]
+        closed_rows = closed_latest[closed_latest.stage == stage]
         scores.extend(_score_stage(stage, open_rows, closed_rows))
 
     # lead_time_days = deadline_on - scored_at, using the real ProjectStage

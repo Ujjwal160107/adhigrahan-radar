@@ -44,7 +44,7 @@ for something no user will ever see. Deliberate, not an oversight.
 | s8_acquisition_handoff | Generates the acquisition contract deterministically (`RISK_SEED`) — no real Bhoomi Rashi snapshot exists in this environment (`data/raw/bhoomirashi/` is an empty placeholder), so every row is `source_label='synthetic'` and disclosed as such. `litigation_risk` archetype projects are routed onto villages with real RED/AMBER parcels (via `s6`'s already-built `vivaad.db`) so the litigation features and the simulated delay are causally consistent, not coincidental | `data/input/{acquisitions,project_stages}.parquet` |
 | s9_acquisition_ingest | Validates: columns, provenance on every row, a resolvable statutory clock per stage, flagship project present. Computes `deadline_on`/`overdue_days`/`is_delayed` once. **Raises on any violation** | `acquisitions.json`, `project_stages.json` |
 | s10_project_bind | Binds project → parcels using `s2`'s `norm_place` + the already-computed gazetteer mapping from `normalized.json`. **No new matcher.** Only Sultanpur projects ever bind (the only district with a real parcel corpus) | `project_parcels.json` |
-| s11_features | 20-feature matrix per `(project, stage)` row, leakage-safe: open stages observe at "now", closed stages observe at a random point strictly before their own completion. Runs the leakage audit and writes the shared `cutoff_date` for the time-based split | `features.parquet`, `cutoff_date.json` |
+| s11_features | 19-feature matrix per `(project, stage, landmark)` row, leakage-safe: open stages are scored once at "now", closed stages contribute one row per *statutory* landmark (0.25/0.50/0.75 of the clock) they were still open at. Runs the leakage audit and writes the shared `cutoff_date` for the time-based split | `features.parquet`, `cutoff_date.json` |
 | s12_train | Per-stage `base_rate` + `logistic_regression` + `hgb_calibrated`, time-based split, threshold selection on the holdout. Whichever wins on Brier score ships | `data/output/models/*.joblib` |
 | s13_risk_score | Scores every open stage with its shipped model; real SHAP drivers (wraps `predict_proba` directly — works for any of the three algo types); recommendations retrieved from `recommendations.py`; `predicted_overrun_days` from the empirical median overrun in the same `(stage, band)` bucket | `project_risk.json` |
 | s14_load_risk_db | `CREATE`s (via the shared `schema.sql`) and DELETE+refills the five risk tables. **Never touches the original eight**, `Watchlist`, or `AuditLog` | `vivaad.db` (13 pipeline-owned tables + `Watchlist` + `AuditLog`) |
@@ -218,14 +218,41 @@ that same reconciliation.
 
 ## Leakage discipline (s11)
 
-Every feature carries a `computed_asof`. Open stages observe at the real
-build "now"; closed (training) stages observe at a point strictly before
-their own completion, seeded per `(project_id, stage)` for reproducibility.
-District-context aggregates are computed on the training split only, gated
-by a shared `cutoff_date` both `s11` and `s12` read from the same file.
-A violation raises at build time, exactly like the `s1` contract check.
+Every feature carries a `computed_asof`, and that observation point is
+chosen **without reference to the outcome being predicted**.
 
-`tests/test_features.py::test_no_future_leakage` and
-`::test_district_context_train_only` enforce it. Leakage is the
-most likely fatal flaw in a hackathon ML pipeline and the first thing a
-technical judge will probe.
+Open stages are scored once, at the real build "now". Closed (training)
+stages are observed at fixed **landmarks** on the *statutory* clock -
+`started_on + f * statutory_days` for `f` in `(0.25, 0.50, 0.75)` - and a
+row is emitted only for the landmarks the stage was still open at, which
+is exactly the condition under which `s13` scores a row in production.
+Landmarks stay strictly below `1.0`: a stage still open at
+`1.0 * statutory_days` has already breached its deadline, so its label
+would be `1` by definition.
+
+> **Why not "a random point before completion"?** That was the original
+> design, and it leaked. `started_on + uniform(0.10, 0.95) *
+> actual_duration` does sit before completion - but it is a *function of
+> the duration*, so `days_in_current_stage` came out as
+> `round(duration * frac)`: the label's own quantity scaled by noise,
+> since `is_delayed` is `duration > statutory_days` and `statutory_days`
+> is a per-stage constant. On the real corpus that single feature scored
+> ROC-AUC 0.64-0.81 with no model at all. Observing *before* the outcome
+> is not the same as being *independent of* it.
+
+`n_prior_stage_overruns` counts only prior stages that had actually closed
+by the observation point. District-context aggregates are computed on the
+training split only, gated by a shared `cutoff_date` both `s11` and `s12`
+read from the same file. `s12` splits whole *stages* on that date, never
+individual rows, so a stage's landmark rows can never straddle the
+train/test boundary; its calibration folds are grouped by project for the
+same reason.
+
+`tests/test_features.py::test_observation_point_is_independent_of_outcome`
+is the regression test for the leak above, backed by
+`::test_days_in_current_stage_takes_only_landmark_values` and
+`::test_landmark_rows_cover_every_survived_landmark`.
+`::test_no_future_leakage` is retained but is **necessary, not
+sufficient** - it passed throughout the period the pipeline was leaking.
+Leakage is the most likely fatal flaw in an ML pipeline and the first
+thing a technical judge will probe.

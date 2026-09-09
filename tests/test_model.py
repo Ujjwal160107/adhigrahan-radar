@@ -84,9 +84,21 @@ def test_medium_never_starts_above_high(runs):
             assert t["t_med"] <= t["t_high"], stage
 
 
-def test_feature_list_matches_the_20_feature_contract(runs):
+def test_feature_list_matches_the_19_feature_contract(runs):
     for stage, r in runs.items():
-        assert len(r["feature_list"]) == 20, stage
+        assert len(r["feature_list"]) == 19, stage
+        assert "district_active_land_cases" not in r["feature_list"], stage
+
+
+def test_holdout_sample_size_is_reported_in_stages_not_rows(runs):
+    """A stage contributes up to three landmark rows, so n_test overstates
+    the evidence by ~3x. The distinct-stage counts must be present and must
+    never exceed the row counts, so no metric can be read as resting on
+    more independent observations than actually exist."""
+    for stage, r in runs.items():
+        assert "n_train_stages" in r and "n_test_stages" in r, stage
+        assert r["n_train_stages"] <= r["n_train"], stage
+        assert r["n_test_stages"] <= r["n_test"], stage
 
 
 def test_model_artifact_exists_for_every_shipped_stage(runs):

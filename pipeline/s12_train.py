@@ -54,7 +54,7 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -113,7 +113,7 @@ def _select_thresholds(y_test, p_test):
     return {"t_high": t_high, "t_med": t_med}, t_high, t_med
 
 
-def _train_one_stage(stage, train, test, cutoff):
+def _train_one_stage(stage, train, test, cutoff, groups=None):
     X_train_raw, y_train = train[FEATURE_COLUMNS], train["is_delayed"].astype(int).values
     X_test_raw, y_test = test[FEATURE_COLUMNS], test["is_delayed"].astype(int).values
     X_train, medians = _impute(X_train_raw)
@@ -147,7 +147,17 @@ def _train_one_stage(stage, train, test, cutoff):
         early_stopping=n_train >= 60, random_state=RISK_SEED,
     )
     try:
-        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RISK_SEED)
+        # A stage contributes several landmark rows, so plain StratifiedKFold
+        # would put rows describing the SAME stage in both the calibration
+        # fit fold and its held-out fold - optimistic calibration for the
+        # same reason a random shuffle of temporal data is optimistic. Group
+        # the folds by project so a stage's rows never straddle a fold.
+        if groups is not None and len(set(groups)) >= n_splits:
+            cv = list(StratifiedGroupKFold(
+                n_splits=n_splits, shuffle=True, random_state=RISK_SEED,
+            ).split(X_train, y_train, groups=groups))
+        else:
+            cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RISK_SEED)
         calibrated = CalibratedClassifierCV(hgb, method=calibration, cv=cv)
         calibrated.fit(X_train, y_train)
         runs["hgb_calibrated"] = calibrated
@@ -194,6 +204,11 @@ def _train_one_stage(stage, train, test, cutoff):
         "stage": stage, "model_version": MODEL_VERSION,
         "trained_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "n_train": n_train, "n_test": n_test,
+        # Landmark rows are not independent observations: up to three
+        # describe the same stage. The distinct-stage counts are the honest
+        # sample size and every metric below should be read against them.
+        "n_train_stages": int(train["project_id"].nunique()) if n_train else 0,
+        "n_test_stages": int(test["project_id"].nunique()) if n_test else 0,
         "n_test_real": 0, "n_test_synthetic": n_test,
         "cutoff_date": cutoff.isoformat(),
         "calibration": calibration, "shipped_algo": shipped_algo,
@@ -222,15 +237,25 @@ def run():
         cutoff = date.fromisoformat(json.load(fh)["cutoff_date"])
 
     df = pd.read_parquet(os.path.join(DATA_IN, "features.parquet"))
-    closed = df[~df.is_censored].copy()
-    closed["obs"] = pd.to_datetime(closed["computed_asof"]).dt.date
+    # Training pool = the landmark rows of closed stages. Serving rows (open
+    # stages observed at TODAY) carry no label and are s13's input, not s12's.
+    pool = df[~df.is_serving_row].copy()
+    pool["completed"] = pd.to_datetime(pool["stage_completed_on"]).dt.date
 
+    # Split whole STAGES, not rows. Each stage contributes up to three
+    # landmark rows; splitting on the row's own observation date would drop
+    # a stage's early landmarks in train and its late ones in test, so the
+    # model would be scored on stages it had already learned. Splitting on
+    # when the OUTCOME became known keeps a stage wholly on one side and
+    # keeps the boundary genuinely temporal: train sees only stages that had
+    # already closed by the cutoff.
     stage_reports = []
     for stage in STAGE_ORDER:
-        rows = closed[closed.stage == stage]
-        train = rows[rows["obs"] <= cutoff]
-        test = rows[rows["obs"] > cutoff]
-        stage_reports.append(_train_one_stage(stage, train, test, cutoff))
+        rows = pool[pool.stage == stage]
+        train = rows[rows["completed"] <= cutoff]
+        test = rows[rows["completed"] > cutoff]
+        stage_reports.append(_train_one_stage(
+            stage, train, test, cutoff, groups=train["project_id"].values))
 
     os.makedirs(DATA_MID, exist_ok=True)
     with open(os.path.join(DATA_MID, "model_runs.json"), "w", encoding="utf-8") as fh:
