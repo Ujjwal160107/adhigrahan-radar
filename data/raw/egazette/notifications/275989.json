@@ -1,0 +1,32 @@
+{
+ "doc_id": 275989,
+ "section": "3A",
+ "so_number": "S.O. 4879(E)",
+ "notified_on": "2026-09-03",
+ "parent_notified_on": null,
+ "nh_no": null,
+ "km_from": 51.0,
+ "km_to": 69.0,
+ "state": "MAHARASHTRA",
+ "districts": [
+  "BHANDARA"
+ ],
+ "villages": [
+  "Mahalgaon",
+  "Deosarra",
+  "Binakhi",
+  "Brahmantola",
+  "Gondkhairi",
+  "Sindpuri",
+  "Chulhad",
+  "Sihora",
+  "Machhera",
+  "Ranera",
+  "Bapera",
+  "Mohgaon Khadan",
+  "Sitepar",
+  "hardoli",
+  "Khairlanji"
+ ],
+ "area_hectares": 7.2768
+}

@@ -1,0 +1,21 @@
+{
+ "doc_id": 275948,
+ "section": "3D",
+ "so_number": null,
+ "notified_on": null,
+ "parent_notified_on": "2026-06-15",
+ "nh_no": "NH146",
+ "km_from": 71.615,
+ "km_to": 93.375,
+ "state": "MADHYA PRADESH",
+ "districts": [
+  "VIDISHA"
+ ],
+ "villages": [
+  "Rampurchak Patni",
+  "Simerhar",
+  "Patni",
+  "Atari Khejra"
+ ],
+ "area_hectares": null
+}

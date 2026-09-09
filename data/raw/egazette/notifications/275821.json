@@ -1,0 +1,23 @@
+{
+ "doc_id": 275821,
+ "section": "3D",
+ "so_number": "S.O. 4729(E)",
+ "notified_on": "2026-08-25",
+ "parent_notified_on": null,
+ "nh_no": "NH56",
+ "km_from": 665.686,
+ "km_to": 710.47,
+ "state": "GUJARAT",
+ "districts": [
+  "VALSAD"
+ ],
+ "villages": [
+  "Karanjveri",
+  "Amba Talat",
+  "Asura",
+  "Bilpudi",
+  "Kasba Dharmpur",
+  "Vadkhambha"
+ ],
+ "area_hectares": 1.127
+}

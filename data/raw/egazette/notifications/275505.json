@@ -1,0 +1,20 @@
+{
+ "doc_id": 275505,
+ "section": "3D",
+ "so_number": "S.O. 4520(E)",
+ "notified_on": "2026-08-14",
+ "parent_notified_on": "2026-06-19",
+ "nh_no": "NH168G",
+ "km_from": 62.5,
+ "km_to": 104.0,
+ "state": "GUJARAT",
+ "districts": [
+  "Sabarkantha"
+ ],
+ "villages": [
+  "Sapavada",
+  "Maniyor",
+  "Laloda"
+ ],
+ "area_hectares": 1.2498
+}

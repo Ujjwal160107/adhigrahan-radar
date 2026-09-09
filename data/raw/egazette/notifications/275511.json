@@ -1,0 +1,24 @@
+{
+ "doc_id": 275511,
+ "section": "3D",
+ "so_number": "S.O. 4524(E)",
+ "notified_on": "2026-08-14",
+ "parent_notified_on": "2025-12-16",
+ "nh_no": "NH227B",
+ "km_from": 140.96,
+ "km_to": 160.2,
+ "state": "UTTAR PRADESH",
+ "districts": [
+  "BARABANKI"
+ ],
+ "villages": [
+  "BARHUWAN",
+  "Pure Kamgar",
+  "Aliabad",
+  "Kamiyar",
+  "Chandamau",
+  "Belkhara Mehfuz",
+  "Belkhara Sailab"
+ ],
+ "area_hectares": 5.7702
+}

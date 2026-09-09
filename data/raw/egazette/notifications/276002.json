@@ -1,0 +1,41 @@
+{
+ "doc_id": 276002,
+ "section": "3A",
+ "so_number": "S.O. 4900(E)",
+ "notified_on": "2026-09-03",
+ "parent_notified_on": null,
+ "nh_no": "NH748A",
+ "km_from": 273.4,
+ "km_to": 331.33,
+ "state": "KARNATAKA",
+ "districts": [
+  "RAICHUR"
+ ],
+ "villages": [
+  "Tippaladinni",
+  "Mandalgera",
+  "Singanodi",
+  "Ramapura",
+  "Baidoddi",
+  "Harkandoddi",
+  "Maliabad",
+  "Mittimalkapura",
+  "Bijanagera",
+  "Devanapalli",
+  "Kalmala",
+  "Hunsihalhuda",
+  "Mamadapura",
+  "Nelahal",
+  "Jalibenchi",
+  "Udamagal",
+  "Kamalapur",
+  "Anwar",
+  "Ashapur",
+  "Gowsanagara",
+  "Siravar",
+  "Jalapur",
+  "Atnur",
+  "Jakkaldinni"
+ ],
+ "area_hectares": 910.6622
+}

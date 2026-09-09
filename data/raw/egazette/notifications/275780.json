@@ -1,0 +1,19 @@
+{
+ "doc_id": 275780,
+ "section": "3D",
+ "so_number": "S.O. 4726(E)",
+ "notified_on": "2026-08-25",
+ "parent_notified_on": "2026-03-03",
+ "nh_no": "NH22",
+ "km_from": 129.05,
+ "km_to": 156.507,
+ "state": "HIMACHAL PRADESH",
+ "districts": [
+  "SHIMLA"
+ ],
+ "villages": [
+  "Kawalag",
+  "Banreru"
+ ],
+ "area_hectares": 1.1196
+}

@@ -1,0 +1,24 @@
+{
+ "doc_id": 275495,
+ "section": "3D",
+ "so_number": "S.O. 4523(E)",
+ "notified_on": "2026-08-14",
+ "parent_notified_on": "2026-06-15",
+ "nh_no": "NH146",
+ "km_from": 108.115,
+ "km_to": 149.141,
+ "state": "MADHYA PRADESH",
+ "districts": [
+  "SAGAR"
+ ],
+ "villages": [
+  "Bahadurpur",
+  "Pipalkhedi",
+  "Rasulpur",
+  "Chouki",
+  "Senpa",
+  "Mankapur",
+  "Mada"
+ ],
+ "area_hectares": 5.3628
+}

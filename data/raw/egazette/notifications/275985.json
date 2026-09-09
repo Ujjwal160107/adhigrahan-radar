@@ -1,0 +1,19 @@
+{
+ "doc_id": 275985,
+ "section": "3A",
+ "so_number": "S.O. 4873(E)",
+ "notified_on": "2026-09-03",
+ "parent_notified_on": null,
+ "nh_no": "NH319A",
+ "km_from": 0.0,
+ "km_to": 30.66,
+ "state": "BIHAR",
+ "districts": [
+  "KAIMUR (BHABUA )"
+ ],
+ "villages": [
+  "Pajarawan",
+  "Darwan"
+ ],
+ "area_hectares": 0.184
+}

@@ -47,3 +47,10 @@ Thumbs.db
 
 # Agent scaffolding
 .superpowers/
+
+# Source gazette PDFs: megabytes each, and every one is re-fetchable from
+# egazette.gov.in by the document id its parsed JSON records. The parsed
+# notifications beside them ARE committed, so `make build` needs no network.
+data/raw/egazette/pdf/
+# The repaired CA bundle is a fetched artifact, rebuilt on demand.
+data/raw/.cache/

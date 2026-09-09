@@ -10,6 +10,7 @@ license = { file = "LICENSE" }
 # tests/ holds the pipeline golden suite, backend/tests/ the API suite.
 testpaths = ["tests", "backend/tests"]
 addopts = "-q"
+pythonpath = ["."]
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.ruff]

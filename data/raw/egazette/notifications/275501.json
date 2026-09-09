@@ -1,0 +1,19 @@
+{
+ "doc_id": 275501,
+ "section": "3D",
+ "so_number": "S.O. 4514(E)",
+ "notified_on": "2026-08-14",
+ "parent_notified_on": "2026-05-13",
+ "nh_no": "NH146",
+ "km_from": 0.8,
+ "km_to": 1.0,
+ "state": "MADHYA PRADESH",
+ "districts": [
+  "BHOPAL"
+ ],
+ "villages": [
+  "Khajuri Khurd",
+  "Khajuri Kalan"
+ ],
+ "area_hectares": 0.2034
+}

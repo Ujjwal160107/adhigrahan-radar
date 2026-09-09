@@ -1,0 +1,24 @@
+{
+ "doc_id": 275733,
+ "section": "3D",
+ "so_number": "S.O. 4659(E)",
+ "notified_on": "2026-08-24",
+ "parent_notified_on": "2025-10-22",
+ "nh_no": "NH748A",
+ "km_from": 89.9,
+ "km_to": 136.1,
+ "state": "KARNATAKA",
+ "districts": [
+  "BAGALKOT"
+ ],
+ "villages": [
+  "Kataginahalli",
+  "Nimbalgundi",
+  "Chittawadgi",
+  "Konkanakoppa",
+  "Togunasi",
+  "Muradi",
+  "Kotikalla"
+ ],
+ "area_hectares": 21.20654
+}

@@ -1,0 +1,32 @@
+{
+ "doc_id": 276013,
+ "section": "3A",
+ "so_number": null,
+ "notified_on": null,
+ "parent_notified_on": null,
+ "nh_no": null,
+ "km_from": 0.0,
+ "km_to": 77.773,
+ "state": "KERALA",
+ "districts": [
+  "THIRUVANANTHAPURAM"
+ ],
+ "villages": [
+  "Kilimanoor",
+  "Pulimath",
+  "Karavaram",
+  "Vamanapuram",
+  "Pullampara",
+  "Aruvikkara",
+  "Nedumangad",
+  "Vizhinjam (Part)",
+  "Pallichal (CT)",
+  "Vilappil (CT)",
+  "Kulathummal (CT)",
+  "Kudavoor",
+  "NAVAIKKULAM BLOCK 22",
+  "NAVAIKKULAM BLOCK 24",
+  "NAVAIKKULAM BLOCK 23"
+ ],
+ "area_hectares": null
+}

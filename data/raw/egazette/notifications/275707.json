@@ -1,0 +1,21 @@
+{
+ "doc_id": 275707,
+ "section": "3D",
+ "so_number": "S.O. 4651(E)",
+ "notified_on": "2026-08-24",
+ "parent_notified_on": "2026-03-03",
+ "nh_no": "NH347C",
+ "km_from": null,
+ "km_to": null,
+ "state": "MADHYA PRADESH",
+ "districts": [
+  "Khargone"
+ ],
+ "villages": [
+  "Jamla",
+  "Jamli",
+  "Fazalipura",
+  "Gopalpura"
+ ],
+ "area_hectares": 1.496
+}

@@ -1,0 +1,19 @@
+{
+ "doc_id": 275496,
+ "section": "3D",
+ "so_number": "S.O. 4515(E)",
+ "notified_on": "2026-08-14",
+ "parent_notified_on": "2025-10-22",
+ "nh_no": "NH151K",
+ "km_from": 0.0,
+ "km_to": 17.4,
+ "state": "GUJARAT",
+ "districts": [
+  "PORBANDAR"
+ ],
+ "villages": [
+  "Bakharla",
+  "Pandavadar"
+ ],
+ "area_hectares": 1.206
+}

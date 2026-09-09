@@ -1,0 +1,24 @@
+{
+ "doc_id": 275947,
+ "section": "3D",
+ "so_number": null,
+ "notified_on": null,
+ "parent_notified_on": "2026-06-15",
+ "nh_no": "NH146",
+ "km_from": 59.5,
+ "km_to": 71.615,
+ "state": "MADHYA PRADESH",
+ "districts": [
+  "VIDISHA"
+ ],
+ "villages": [
+  "Bhadar Badagaon",
+  "Khari",
+  "Hirnai",
+  "Bhirokhedi",
+  "Dhaturiya",
+  "Kuwakhedi",
+  "Meharkhedi"
+ ],
+ "area_hectares": null
+}
