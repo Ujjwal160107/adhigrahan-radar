@@ -225,13 +225,18 @@ technical reviewer is an unlabelled fabricated number.
 
 1. **Provenance on every row.** `real` · `synthetic` · `mocked` · `derived` ·
    `model_generated` · `cached`.
-2. **Synthetic data may train a model; only real data may score it.** No real acquisition
-   dataset was available in this environment (`data/raw/bhoomirashi/` is an empty
-   placeholder), so `n_test_real = 0` for every stage, always — and every `ModelRun` row says
-   so in `notes`. The mechanism (per-stage calibration, holdout, threshold selection,
-   baseline comparison) is genuine; the reported metrics are a diagnostic of that mechanism,
-   not a validated real-world performance claim. The model registry (`/models` in the app)
-   states this prominently, not in fine print.
+2. **Synthetic data may train a model; only real data may score it — per stage.** The
+   corpus is hybrid: 55 real projects from the Gazette of India sit beside 96 synthetic
+   ones, separable by `source_label` on every row and badged on every screen. Only the
+   §3A→§3D clock is ever gazetted, so `notification_3a_11` is the one stage with real
+   holdout rows (`n_test_real = 92` landmark rows from 40 real intervals, scored on their own
+   as `real_holdout`); stages 2–5 report `n_test_real = 0` and say why in `notes`. A young
+   harvest's real intervals are all on time — a lapsed §3A never yields a §3D — so real
+   discrimination metrics stay undefined until one lapses; real Brier is reported meanwhile,
+   and it is **not** evidence of skill: every real row's top driver lies beyond the training
+   range (see rule 6). Everywhere the holdout is synthetic, the metrics are a diagnostic of
+   the mechanism, not a validated real-world performance claim. The model registry
+   (`/models` in the app) states all of this prominently, per stage, not in fine print.
 3. **Statutory clocks are labelled.** Three of five stage deadlines come from law; two are
    administrative targets we chose. Every `ProjectStage` row carries `clock_source` and every
    screen renders the distinction via the `ClockSourceBadge` component.
@@ -245,8 +250,13 @@ technical reviewer is an unlabelled fabricated number.
    what makes the band mean "elevated": below it, HIGH fires on the ordinary project and
    is unexplainable by construction — the score is the model baseline plus each feature's
    contribution, so a row *below* the baseline reaches HIGH with every SHAP driver pointing
-   at lower risk. HIGH is currently suppressed for `notification_3a_11` and `possession`,
-   where `base_rate` beat both learned models on this corpus.
+   at lower risk. HIGH is currently suppressed for `award_3g_23`, `compensation_disbursed`
+   and `possession`, where `base_rate` beat both learned models on this corpus. MEDIUM is
+   the *most* selective cutoff that still recalls 80% of holdout overruns, and a driver whose
+   value lies outside anything the model saw in training is flagged **beyond training
+   range** on the project page rather than clipped — every real gazette project's top driver
+   currently is, because the synthetic corpus tops out at 3 villages and 140 ha where the
+   gazette runs to 50 and 910.
 7. **No hardcoded demo data — or business rules — in the frontend.** Every dashboard number,
    chart, table row, badge and filter option is read from the database through the API,
    including the district list itself. Where a value cannot be computed (e.g. a district
@@ -258,9 +268,9 @@ technical reviewer is an unlabelled fabricated number.
 
 ## Real acquisition data
 
-`data/raw/bhoomirashi/` was an empty placeholder, which is why every acquisition row in the
-build below is synthetic and why `n_test_real = 0` everywhere. The implementation blueprint
-calls that risk **X-1**, "the single largest risk".
+`data/raw/bhoomirashi/` was an empty placeholder, which is why every acquisition row used to
+be synthetic and `n_test_real = 0` everywhere. The implementation blueprint calls that risk
+**X-1**, "the single largest risk". It is closed for the one stage the public record labels.
 
 `ingest/` closes it at the source. It harvests real §3A and §3D notifications from the
 Gazette of India — the authoritative publication channel for National Highways Act
@@ -273,8 +283,9 @@ make ingest ARGS="--limit 200"     # a bounded first run
 
 A §3D notification is self-describing: it states its own date and recites the date of the
 §3A it closes, so **one document yields a complete, real, labelled interval** against the
-365-day s.3D(3) clock — the one whose breach voids the notification. Three intervals from
-the first harvest: 218, 357 and 363 days. Two came within days of lapsing.
+365-day s.3D(3) clock — the one whose breach voids the notification. The committed harvest
+holds forty closed intervals, from 35 to 364 days; the longest three (364, 356 and 335
+days) came within weeks of lapsing.
 
 **Only stage 1 can ever be real.** Awards under §3G, compensation disbursement and taking of
 possession are never gazetted, so the other four stages stay synthetic. That is a limit of
@@ -284,10 +295,22 @@ globally.
 `make build` still never touches the network — `make ingest` is a separate, explicit,
 human-run command, and the build reads only what it left behind.
 
-Wiring the contract into `s8`–`s12` is ML work and is deliberately not done here:
-[`docs/specs/2026-09-10-acquisition-contract-handoff.md`](docs/specs/2026-09-10-acquisition-contract-handoff.md)
-specifies it. Until that lands, **honesty rule 2 below still applies in full** — the shipped
-build is trained and scored entirely on synthetic acquisition rows.
+The contract is wired into the build, per
+[`docs/specs/2026-09-10-acquisition-contract-handoff.md`](docs/specs/2026-09-10-acquisition-contract-handoff.md):
+
+- `s8` windows it at the build's "now" (`common.TODAY`, pinned to the harvest date — a
+  notification published after it does not exist yet, a declaration published after it has
+  not happened yet) and appends every gazetted project as a `real` row carrying its one
+  gazetted stage. Measures the gazette never publishes stay NULL.
+- `s9` refuses a real row that carries such a measure, or a real project with a non-real
+  stage. `s10` binds by (district, village), so a real village name can never fabricate a
+  link into another district's parcels.
+- `s11`/`s12` carry stage provenance through to a per-stage `n_test_real` and a separately
+  scored real holdout; `s13` scores every open real notification like any other open stage.
+
+The shipped build holds **151 projects — 96 synthetic and 55 real across 17 states — 40 real
+§3A→§3D intervals in the holdout, and 15 real open notifications on the risk dashboard.**
+Every real figure traces to a gazette document id in `gazette_ref`.
 
 ---
 

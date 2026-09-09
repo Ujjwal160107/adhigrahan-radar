@@ -118,6 +118,34 @@ def test_high_risk_rows_carry_an_actionable_recommendation(scores):
             "its drivers all reduce risk")
 
 
+def test_extrapolated_drivers_are_flagged_never_hidden(scores):
+    """A driver whose value lies outside what the shipped model saw in
+    training is an extrapolation - a real gazette project spanning 50
+    villages against a synthetic corpus that tops out at three - and must
+    say so on the driver itself, never be clipped, never be presented as a
+    learned effect. Checked against the actual training split, not the
+    bundle, so the flag and the split cannot drift apart."""
+    import pandas as pd
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    df = pd.read_parquet(os.path.join(root, "data", "input", "features.parquet"))
+    with open(os.path.join(root, "data", "intermediate", "cutoff_date.json"),
+              encoding="utf-8") as fh:
+        cutoff = json.load(fh)["cutoff_date"]
+    pool = df[~df.is_serving_row]
+    train = pool[pool.stage_completed_on <= cutoff]
+    for s in scores:
+        stage_train = train[train.stage == s["stage"]]
+        for d in s["drivers"]:
+            assert "outside_training_range" in d, (s["project_id"], d["feature"])
+            if d["value"] is None or stage_train.empty:
+                assert d["outside_training_range"] is False
+                continue
+            lo, hi = stage_train[d["feature"]].min(), stage_train[d["feature"]].max()
+            expected = bool(d["value"] < lo or d["value"] > hi)
+            assert d["outside_training_range"] == expected, (
+                s["project_id"], d["feature"], d["value"], (lo, hi))
+
+
 def test_drivers_only_name_features_the_model_was_trained_on(scores):
     """A driver naming a feature outside the model's own feature_list means
     the label table and the feature matrix have drifted - which is how a

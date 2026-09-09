@@ -93,8 +93,15 @@ from common import DATA_IN, DATA_MID, DB, STAGE_CLOCKS, TODAY, report
 TODAY_D = date.fromisoformat(TODAY)
 
 # Fractions of a stage's STATUTORY clock at which a still-open stage is
-# observed. Strictly < 1.0 - see the module docstring.
-LANDMARK_FRACTIONS = (0.25, 0.50, 0.75)
+# observed. 0.0 is the day the stage opened - the moment a freshly gazetted
+# notification first appears on the dashboard, and where every real open
+# row in the first harvest sat (all within a week of TODAY): without it
+# the model was scored at elapsed times it had never seen, since the
+# earliest landmark was day 91. Elapsed time is zero for every row there,
+# so it carries no label information and no survival selection - exactly
+# the serving situation for a new notification. Strictly < 1.0 at the top
+# - see the module docstring.
+LANDMARK_FRACTIONS = (0.0, 0.25, 0.50, 0.75)
 
 FEATURE_COLUMNS = [
     # A. litigation (9) - the differentiator
@@ -335,6 +342,10 @@ def run():
             "is_censored": stage_row["completed_on"] is None,
             "is_serving_row": is_serving,
             "stage_completed_on": stage_row["completed_on"],
+            # Where the STAGE came from (real gazette record vs generated),
+            # carried so s12 can count and score the real slice of the
+            # holdout on its own. The feature row itself is model_generated.
+            "stage_source_label": stage_row["source_label"],
             "district": p["district"], "source_label": "model_generated",
             **lit,
             "litigation_coverage": 1 if p["district"] in litigation_districts else 0,
@@ -369,7 +380,7 @@ def run():
     df = pd.DataFrame(feature_rows)
     ordered = (["project_id", "stage", "landmark_fraction", "computed_asof",
                "is_delayed", "is_censored", "is_serving_row", "stage_completed_on",
-               "district", "source_label"] + FEATURE_COLUMNS)
+               "stage_source_label", "district", "source_label"] + FEATURE_COLUMNS)
     df = df[ordered]
     os.makedirs(DATA_IN, exist_ok=True)
     df.to_parquet(os.path.join(DATA_IN, "features.parquet"), index=False)
@@ -385,6 +396,10 @@ def run():
         "rows_per_covered_stage": (round(len(train_rows) / stages_covered, 2)
                                    if stages_covered else 0),
         "serving_rows": int(df.is_serving_row.sum()),
+        "real_training_rows": int(((~df.is_serving_row)
+                                   & (df.stage_source_label == "real")).sum()),
+        "real_serving_rows": int((df.is_serving_row
+                                  & (df.stage_source_label == "real")).sum()),
         "litigation_districts": ",".join(sorted(litigation_districts)),
         "rows_with_litigation_coverage": int((df.litigation_coverage == 1).sum()),
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),

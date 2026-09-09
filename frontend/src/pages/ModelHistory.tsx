@@ -35,6 +35,11 @@ export const ModelHistory: React.FC = () => {
     return <div className="p-16 font-mono text-sm text-ink-muted">Reading the model registry…</div>;
   }
 
+  // Read from the registry, never assumed: which stages carry real rows is
+  // whatever s12 counted for this build.
+  const realRuns = runs.filter((r) => r.n_test_real > 0);
+  const realRows = realRuns.reduce((n, r) => n + r.n_test_real, 0);
+
   return (
     <div className="w-full px-8 sm:px-16 md:px-20 pb-16 max-w-6xl mx-auto">
       <div className="pt-10 pb-8">
@@ -55,11 +60,26 @@ export const ModelHistory: React.FC = () => {
       ) : null}
 
       <div className="border-2 border-radar-amber bg-[#FEF3C7] p-4 font-mono text-xs text-black mb-6">
-        <strong>No real acquisition dataset was available in this environment.</strong>{' '}
-        Every metric below is measured on a synthetic, deterministically generated corpus
-        (n_test_real = 0 for every stage). These numbers demonstrate the mechanism - a real
-        calibrated per-stage classifier with a genuine holdout, threshold selection and
-        baseline comparison - not a validated real-world performance claim.
+        {realRuns.length === 0 ? (
+          <>
+            <strong>No real acquisition rows reached this build&apos;s holdout.</strong>{' '}
+            Every metric below is measured on a synthetic, deterministically generated corpus
+            (n_test_real = 0 for every stage). These numbers demonstrate the mechanism - a real
+            calibrated per-stage classifier with a genuine holdout, threshold selection and
+            baseline comparison - not a validated real-world performance claim.
+          </>
+        ) : (
+          <>
+            <strong>Real data reaches one stage only.</strong>{' '}
+            {realRows} real holdout rows from Gazette of India §3A→§3D notifications back{' '}
+            {realRuns.map((r) => STAGE_LABELS[r.stage] || r.stage).join(', ')} - the only stage
+            the public record labels. Awards, compensation and possession are never gazetted,
+            so every other stage is measured on a synthetic corpus (n_test_real = 0) and its
+            numbers demonstrate the mechanism, not real-world performance. A young harvest&apos;s
+            real rows are all on time - a lapsed §3A never yields a §3D - so real discrimination
+            metrics stay undefined until one lapses; each stage&apos;s notes say so.
+          </>
+        )}
       </div>
 
       {runs.map((run) => {
@@ -84,7 +104,12 @@ export const ModelHistory: React.FC = () => {
               </div>
               <div>
                 <div className="text-[10px] uppercase text-ink-muted">Real test rows</div>
-                <div className="font-bold mt-1 text-radar-amber">{run.n_test_real}</div>
+                <div className="font-bold mt-1 text-radar-amber">
+                  {run.n_test_real}
+                  {run.n_test_real > 0 && run.n_test_real_stages != null
+                    ? <span className="font-normal text-ink-muted"> ({run.n_test_real_stages} gazette intervals)</span>
+                    : null}
+                </div>
               </div>
               <div>
                 <div className="text-[10px] uppercase text-ink-muted">Calibration</div>
@@ -113,13 +138,14 @@ export const ModelHistory: React.FC = () => {
                     <th className="pb-2 pr-4">ROC-AUC</th>
                     <th className="pb-2 pr-4">PR-AUC</th>
                     <th className="pb-2 pr-4">Brier (holdout)</th>
+                    <th className="pb-2 pr-4">Brier (real rows)</th>
                     <th className="pb-2">Shipped</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/10">
                   {Object.keys(run.metrics).length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-2 text-ink-muted">
+                      <td colSpan={6} className="py-2 text-ink-muted">
                         No algorithm could be fitted for this stage - see the note below.
                       </td>
                     </tr>
@@ -130,6 +156,7 @@ export const ModelHistory: React.FC = () => {
                       <td className="py-2 pr-4">{fmt(m.roc_auc)}</td>
                       <td className="py-2 pr-4">{fmt(m.pr_auc)}</td>
                       <td className="py-2 pr-4">{fmt(m.brier)}</td>
+                      <td className="py-2 pr-4">{fmt(m.real_holdout?.brier ?? null)}</td>
                       <td className="py-2">{algo === run.algo ? '✓' : ''}</td>
                     </tr>
                   ))}

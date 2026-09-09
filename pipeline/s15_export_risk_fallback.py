@@ -43,6 +43,7 @@ def _project_list_row(con, p):
         "id": p["id"], "name": p["name"], "district": p["district"],
         "act": p["act"], "current_stage": p["current_stage"], "status": p["status"],
         "area_hectares": p["area_hectares"], "affected_families": p["affected_families"],
+        "source_label": p["source_label"],
         "risk_band": risk["risk_band"] if risk else None,
         "delay_probability": risk["delay_probability"] if risk else None,
         "days_remaining": risk["lead_time_days"] if risk else None,

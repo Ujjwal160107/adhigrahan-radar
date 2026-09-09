@@ -9,6 +9,7 @@ import {
 } from '../types/api';
 import { RiskBadge } from '../components/RiskBadge';
 import { ClockSourceBadge } from '../components/ClockSourceBadge';
+import { ProvenanceBadge } from '../components/ProvenanceBadge';
 
 const STAGE_LABELS: Record<string, string> = {
   notification_3a_11: 'Notification (3A / S.11)',
@@ -118,8 +119,11 @@ export const ProjectDetail: React.FC = () => {
           <h1 className="font-serif italic font-bold text-2xl sm:text-3xl md:text-4xl text-black tracking-tight">
             {project.name}
           </h1>
-          <p className="font-mono text-xs text-ink-muted mt-1">
-            {project.district} · {project.executing_agency} · {project.act === 'NH_1956' ? 'NH Act 1956' : 'RFCTLARR 2013'}
+          <p className="font-mono text-xs text-ink-muted mt-1 flex flex-wrap items-center gap-2">
+            <ProvenanceBadge source={project.source_label} />
+            <span>
+              {project.district} · {project.executing_agency ?? 'Executing agency not stated in the gazette'} · {project.act === 'NH_1956' ? 'NH Act 1956' : 'RFCTLARR 2013'}
+            </span>
           </p>
         </div>
       </div>
@@ -149,13 +153,25 @@ export const ProjectDetail: React.FC = () => {
             </h3>
             {!openStageRisk ? (
               <p className="font-mono text-sm text-ink-muted">
-                No open stage to score - the project is {project.status}.
+                {project.source_label === 'real'
+                  ? 'Nothing left to score from the public record: the §3D declaration is published, and the stages after it (award, compensation, possession) are never gazetted.'
+                  : `No open stage to score - the project is ${project.status}.`}
               </p>
             ) : (
               <div className="space-y-2">
                 {openStageRisk.drivers.slice(0, 5).map((d) => (
                   <div key={d.feature} className="flex items-center justify-between gap-3 font-mono text-xs">
-                    <span className="text-black">{d.label}</span>
+                    <span className="text-black">
+                      {d.label}
+                      {d.outside_training_range ? (
+                        <span
+                          title="This value lies outside anything the model saw in training; its contribution is an extrapolation, not a learned effect."
+                          className="ml-2 border border-radar-amber text-radar-amber text-[10px] uppercase tracking-wider px-1 py-0.5"
+                        >
+                          beyond training range
+                        </span>
+                      ) : null}
+                    </span>
                     <span className={d.direction === 'increases_risk' ? 'text-radar-red font-bold' : 'text-radar-green'}>
                       {d.direction === 'increases_risk' ? '↑' : '↓'} {Math.abs(d.shap_value).toFixed(3)}
                     </span>

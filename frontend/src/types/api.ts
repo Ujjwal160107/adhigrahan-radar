@@ -191,8 +191,12 @@ export interface ProjectListItem {
   act: ActType;
   current_stage: string | null;
   status: ProjectStatus;
-  area_hectares: number;
-  affected_families: number;
+  area_hectares: number | null;
+  // NULL on gazette-sourced rows: the notification never publishes it, and
+  // an imputed value that reached the API would read as a measurement.
+  affected_families: number | null;
+  // 'real' (Gazette of India) | 'synthetic' - separable everywhere it appears.
+  source_label: string;
   risk_band: RiskBand | null;
   delay_probability: number | null;
   days_remaining: number | null;
@@ -231,16 +235,16 @@ export interface ProjectDetail {
   id: string;
   name: string;
   project_type: string;
-  executing_agency: string;
+  executing_agency: string | null;   // not stated in a gazette notification
   act: ActType;
   state: string;
   district: string;
   block: string | null;
   nh_no: string | null;
   gazette_ref: string | null;
-  area_hectares: number;
-  affected_families: number;
-  budget_estimate_inr: number;
+  area_hectares: number | null;
+  affected_families: number | null;  // never published - NULL on real rows
+  budget_estimate_inr: number | null; // never published - NULL on real rows
   current_stage: string | null;
   stage_entered_on: string | null;
   status: ProjectStatus;
@@ -255,6 +259,11 @@ export interface RiskDriver {
   shap_value: number;
   direction: 'increases_risk' | 'decreases_risk';
   value: number | null;
+  /** True when the value lies outside anything the shipped model saw in
+   * training - the contribution is an extrapolation, flagged rather than
+   * clipped (a gazette project spanning 50 villages against a synthetic
+   * corpus that tops out at three). */
+  outside_training_range?: boolean;
 }
 
 export interface RiskRecommendation {
@@ -339,12 +348,25 @@ export interface DashboardRisk {
   top_at_risk: DashboardRiskTopItem[];
 }
 
+/** Metrics on the gazette-sourced slice of a holdout alone; null when the
+ * stage has no real rows. `roc_auc` is null while the real rows are a
+ * single class - a lapsed 3A never yields a 3D, so a young harvest's closed
+ * intervals are all on time. */
+export interface RealHoldoutMetrics {
+  n_rows: number;
+  n_stages: number;
+  positive_rate: number;
+  brier: number;
+  roc_auc: number | null;
+}
+
 export interface ModelRunMetrics {
   roc_auc: number | null;
   pr_auc: number | null;
   brier: number | null;
   train_brier: number;
   train_positive_rate: number | null;
+  real_holdout?: RealHoldoutMetrics | null;
 }
 
 export interface ModelRunEntry {
@@ -354,7 +376,12 @@ export interface ModelRunEntry {
   shipped: number;
   n_train: number;
   n_test: number;
+  n_train_real?: number;
+  // Real (gazette-sourced) rows in the holdout, per stage. Only
+  // notification_3a_11 can ever be non-zero: the 3A->3D interval is
+  // gazetted, awards/compensation/possession are not.
   n_test_real: number;
+  n_test_real_stages?: number;       // distinct real intervals behind n_test_real
   n_test_synthetic: number;
   cutoff_date: string;
   /** 'isotonic' | 'sigmoid' - the branch s12 took, never re-derived here. */

@@ -32,6 +32,12 @@ import shap
 from common import DATA_IN, DATA_MID, DATA_OUT, FLAGSHIP_PROJECT_ID, TODAY, report
 from recommendations import recommend
 from s11_features import FEATURE_COLUMNS
+from threadpoolctl import threadpool_limits
+
+# See common.py. SHAP calls predict_proba thousands of times on a handful
+# of rows each; OpenMP fan-out inside HistGradientBoosting's predict is
+# pure overhead there and spun under contention.
+_OPENMP_SINGLE_THREAD = threadpool_limits(limits=1, user_api="openmp")
 
 MODELS_DIR = os.path.join(DATA_OUT, "models")
 TODAY_D = date.fromisoformat(TODAY)
@@ -78,6 +84,15 @@ def _impute(X, medians):
     return X
 
 
+def _outside_training_range(value, rng):
+    """True when a raw feature value lies outside [min, max] of what the
+    shipped model was trained on. NULL (imputed to the training median
+    downstream) is inside by construction."""
+    if rng is None or pd.isna(value):
+        return False
+    return bool(value < rng[0] or value > rng[1])
+
+
 def _risk_band(p, thresholds):
     t_high = thresholds.get("t_high")
     t_med = thresholds.get("t_med")
@@ -107,7 +122,7 @@ def _overrun_lookup(closed_df, bundle, thresholds):
     return {k: float(v) for k, v in by_band.items()}, overall
 
 
-def _score_stage(stage, open_rows, closed_rows):
+def _score_stage(stage, open_rows, closed_rows, training_rows):
     path = os.path.join(MODELS_DIR, f"{stage}.joblib")
     if not os.path.exists(path) or open_rows.empty:
         return []
@@ -119,14 +134,24 @@ def _score_stage(stage, open_rows, closed_rows):
 
     overrun_by_band, overrun_overall = _overrun_lookup(closed_rows, bundle, thresholds)
 
-    # Background for SHAP: up to 30 training/closed rows for this stage, or
-    # the open rows themselves if the stage has no closed history at all.
-    bg_source = closed_rows if not closed_rows.empty else open_rows
+    # Background for SHAP: the population the model was TRAINED on - every
+    # landmark row of every closed stage, sampled - and not the
+    # latest-landmark subset `closed_rows` holds. That subset is right for
+    # the overrun lookup (one vote per historical stage) but wrong as a
+    # baseline: it is the survivors, whose predicted risk runs well above
+    # the stage's base rate, so a row scored HIGH (>= t_high >= base rate)
+    # came out with every SHAP driver negative - a HIGH badge over five
+    # reasons for lower risk, and no recommendation. The first real gazette
+    # project to score HIGH did exactly that. Against the training
+    # population the baseline is the base rate the HIGH cut was floored
+    # on, so a HIGH row's contributions sum to a positive number.
+    bg_source = training_rows if not training_rows.empty else open_rows
     background = _impute(bg_source[FEATURE_COLUMNS], bundle["medians"])
-    background = background.sample(min(30, len(background)), random_state=0)
+    background = background.sample(min(50, len(background)), random_state=0)
     explainer = shap.Explainer(lambda z: bundle["model"].predict_proba(z)[:, 1], background)
     shap_values = explainer(X_open).values
 
+    ranges = bundle.get("feature_ranges", {})
     out = []
     for i, (_, row) in enumerate(open_rows.iterrows()):
         p = float(p_open[i])
@@ -140,6 +165,13 @@ def _score_stage(stage, open_rows, closed_rows):
             "direction": "increases_risk" if sv[j] > 0 else "decreases_risk",
             "value": (float(row[FEATURE_COLUMNS[j]])
                      if pd.notna(row[FEATURE_COLUMNS[j]]) else None),
+            # A value the model never saw in training: the contribution is
+            # an extrapolation and the product says so. Flagged, never
+            # clipped or hidden - the real gazette projects are exactly
+            # where this happens (50 villages, 900 hectares) and the officer
+            # must know the model is reasoning past its evidence.
+            "outside_training_range": _outside_training_range(
+                row[FEATURE_COLUMNS[j]], ranges.get(FEATURE_COLUMNS[j])),
         } for j in order]
 
         overrun = overrun_by_band.get(band, overrun_overall)
@@ -179,7 +211,8 @@ def run():
     for stage in df.stage.unique():
         open_rows = df[(df.stage == stage) & (df.is_serving_row)]
         closed_rows = closed_latest[closed_latest.stage == stage]
-        scores.extend(_score_stage(stage, open_rows, closed_rows))
+        training_rows = df[(df.stage == stage) & (~df.is_serving_row)]
+        scores.extend(_score_stage(stage, open_rows, closed_rows, training_rows))
 
     # lead_time_days = deadline_on - scored_at, using the real ProjectStage
     # deadline (already computed by s9), not the feature row's obs date.

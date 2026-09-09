@@ -8,6 +8,7 @@ Run after every data drop, alongside tests/test_golden.py:
 """
 import json
 import os
+import re
 import sqlite3
 import sys
 from datetime import date, timedelta
@@ -17,6 +18,8 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MID = os.path.join(ROOT, "data", "intermediate")
 DB = os.path.join(ROOT, "data", "output", "vivaad.db")
+CONTRACT = os.path.join(ROOT, "data", "raw", "acquisition_projects.json")
+UNGAZETTED = ("affected_families", "budget_estimate_inr", "executing_agency", "block")
 FLAGSHIP_PROJECT_ID = "PRJ-SUL-001"
 ACQUISITION_DISTRICTS = {"Sultanpur", "Amethi", "Pratapgarh", "Raebareli",
                          "Ayodhya", "Barabanki", "Gonda", "Basti"}
@@ -55,6 +58,21 @@ def con():
     c.close()
 
 
+@pytest.fixture(scope="module")
+def contract():
+    """The ingest layer's contract - the source of every real row."""
+    assert os.path.exists(CONTRACT), "data/raw/acquisition_projects.json missing"
+    with open(CONTRACT, encoding="utf-8") as fh:
+        return {c["project_id"]: c for c in json.load(fh)}
+
+
+@pytest.fixture(scope="module")
+def build_today():
+    sys.path.insert(0, os.path.join(ROOT, "pipeline"))
+    from common import TODAY
+    return TODAY
+
+
 def test_flagship_project_exists(acquisitions):
     ids = {p["project_id"] for p in acquisitions}
     assert FLAGSHIP_PROJECT_ID in ids
@@ -70,8 +88,10 @@ def test_flagship_project_binds_the_flagship_parcel(bindings):
         f"flagship project does not bind P-B01: bound to {flagship_parcels}")
 
 
-def test_every_district_represented(acquisitions):
-    got = {p["district"] for p in acquisitions}
+def test_every_contracted_district_is_represented_by_the_synthetic_corpus(acquisitions):
+    """The eight contracted UP districts bound the GENERATED corpus. Real
+    rows sit wherever the gazette put them and are checked on their own."""
+    got = {p["district"] for p in acquisitions if p["source_label"] == "synthetic"}
     assert got == ACQUISITION_DISTRICTS
 
 
@@ -190,10 +210,98 @@ def test_lapsed_history_archetype_has_a_lapsed_project(acquisitions, archetypes)
             f"{pid} lapsed under an unexpected archetype: {archetypes.get(pid)}")
 
 
-def test_gazette_republication_only_on_administrative_archetypes(acquisitions):
+def test_synthetic_republications_come_only_from_administrative_archetypes(
+        acquisitions, archetypes):
+    """A GENERATED re-publication count is a property of the admin-delay
+    archetypes. A REAL count is whatever the gazette says - the handoff
+    singles it out as plausibly the strongest real feature - and must never
+    be constrained by the generator's rule."""
     for p in acquisitions:
-        if p["gazette_republication_count"] > 0:
-            assert p["source_label"] == "synthetic"
+        if p["source_label"] == "synthetic" and p["gazette_republication_count"] > 0:
+            assert archetypes[p["project_id"]] in (
+                "admin_risk", "lapsed_history", "mixed_risk"), p["project_id"]
+
+
+def test_real_projects_are_present_and_traceable_to_a_gazette_document(
+        acquisitions, stages, contract):
+    """The contract's `PRJ-<district>-G<doc id>` is kept verbatim, and the
+    document id is repeated in gazette_ref, so every real figure in the
+    product traces back to a retrievable government PDF."""
+    real = [p for p in acquisitions if p["source_label"] == "real"]
+    assert real, "no gazette-sourced project in the corpus"
+    for p in real:
+        assert re.fullmatch(r"PRJ-[A-Z]{3}-G\d+", p["project_id"]), p["project_id"]
+        assert p["act"] == "NH_1956", p["project_id"]
+        for doc_id in contract[p["project_id"]]["source_doc_ids"]:
+            assert f"eGazette {doc_id}" in p["gazette_ref"], p["project_id"]
+    real_ids = {p["project_id"] for p in real}
+    real_stages = [s for s in stages if s["project_id"] in real_ids]
+    assert len(real_stages) == len(real_ids), "a real project must carry exactly one stage"
+    assert {s["stage"] for s in real_stages} == {"notification_3a_11"}
+    assert all(s["source_label"] == "real" for s in real_stages)
+    assert all(s["clock_authority"] == "NH Act 1956 s.3D(3)" for s in real_stages)
+
+
+def test_real_rows_never_carry_a_measure_the_gazette_does_not_publish(acquisitions):
+    """Absent is not zero (handoff, section 3). A value here would be an
+    imputation dressed as a measurement."""
+    for p in acquisitions:
+        if p["source_label"] == "real":
+            for col in UNGAZETTED:
+                assert p[col] is None, (p["project_id"], col)
+
+
+def test_real_dates_are_the_gazette_dates_windowed_at_the_build_now(
+        acquisitions, stages, contract, build_today):
+    """started_on is the s.3A date verbatim. completed_on is the s.3D date
+    verbatim when it falls on or before TODAY and NULL otherwise - censored,
+    never coerced. Nothing real is dated after the build's now, and a
+    notification not yet published by then does not exist in the corpus."""
+    real_ids = {p["project_id"] for p in acquisitions if p["source_label"] == "real"}
+    for s in stages:
+        if s["project_id"] not in real_ids:
+            continue
+        c = contract[s["project_id"]]
+        assert s["started_on"] == c["notified_3a_on"], s["project_id"]
+        assert s["started_on"] <= build_today, s["project_id"]
+        if c["declared_3d_on"] and c["declared_3d_on"] <= build_today:
+            assert s["completed_on"] == c["declared_3d_on"], s["project_id"]
+        else:
+            assert s["completed_on"] is None, s["project_id"]
+    for pid, c in contract.items():
+        if c["notified_3a_on"] > build_today:
+            assert pid not in real_ids, f"{pid} is notified after TODAY yet in the corpus"
+
+
+def test_district_spelling_is_one_per_place(acquisitions):
+    """'SULTANPUR' and 'Sultanpur' would be two districts for one place and
+    split every district feature and filter in half (handoff, section 5)."""
+    by_lower = {}
+    for p in acquisitions:
+        by_lower.setdefault(p["district"].lower(), set()).add(p["district"])
+    dupes = {k: sorted(v) for k, v in by_lower.items() if len(v) > 1}
+    assert not dupes, dupes
+    assert not any(d != d.strip() or "  " in d or "( " in d for d in by_lower)
+
+
+def test_real_and_synthetic_rows_are_separable_in_the_db(con):
+    for t in ("AcquisitionProject", "ProjectStage"):
+        n_real = con.execute(
+            f"SELECT COUNT(*) FROM {t} WHERE source_label='real'").fetchone()[0]
+        n_syn = con.execute(
+            f"SELECT COUNT(*) FROM {t} WHERE source_label='synthetic'").fetchone()[0]
+        assert n_real > 0 and n_syn > 0, (t, n_real, n_syn)
+
+
+def test_open_real_notifications_are_scored(con):
+    """The tangible output: a real, open s.3A notification gets a delay
+    score and drivers like any other open stage, and shows up wherever the
+    portfolio is ranked."""
+    n = con.execute(
+        """SELECT COUNT(*) FROM ProjectRisk pr
+           JOIN AcquisitionProject ap ON ap.id = pr.project_id
+           WHERE ap.source_label = 'real'""").fetchone()[0]
+    assert n > 0, "no gazette-sourced project has a risk score"
 
 
 def test_provenance_is_traceable(acquisitions, stages, bindings):
@@ -236,13 +344,17 @@ def test_project_ids_are_unique_and_district_prefixes_do_not_collide(acquisition
     be a bijection with the district set."""
     ids = [p["project_id"] for p in acquisitions]
     assert len(set(ids)) == len(ids), "duplicate project_id in the corpus"
+    # The prefix bijection is a property of the GENERATOR's id space. A real
+    # id is `PRJ-<abbr>-G<gazette doc id>` and is unique by the document id
+    # regardless of prefix (Solan and Solapur both abbreviate to SOL).
+    synthetic = [p for p in acquisitions if p["source_label"] == "synthetic"]
     abbr_to_districts = {}
-    for p in acquisitions:
+    for p in synthetic:
         abbr = p["project_id"].split("-")[1]
         abbr_to_districts.setdefault(abbr, set()).add(p["district"])
     collisions = {a: sorted(d) for a, d in abbr_to_districts.items() if len(d) > 1}
     assert not collisions, f"districts sharing a project-id prefix: {collisions}"
-    assert len(abbr_to_districts) == len({p["district"] for p in acquisitions})
+    assert len(abbr_to_districts) == len({p["district"] for p in synthetic})
 
 
 def test_a_lapsed_project_is_guaranteed_not_rolled_for(acquisitions, archetypes):

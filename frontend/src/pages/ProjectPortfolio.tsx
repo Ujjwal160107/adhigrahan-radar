@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { ProjectListItem } from '../types/api';
 import { RiskBadge } from '../components/RiskBadge';
+import { ProvenanceBadge } from '../components/ProvenanceBadge';
 
 // RISK_BANDS is a fixed vocabulary (s12 emits exactly these three), so it
 // stays a literal. The district list is not: it is whatever districts the
@@ -137,7 +138,10 @@ export const ProjectPortfolio: React.FC = () => {
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold truncate">{p.name}</div>
+                  <div className="font-bold flex items-center gap-2 min-w-0">
+                    <span className="truncate">{p.name}</span>
+                    <ProvenanceBadge source={p.source_label} />
+                  </div>
                   <div className="text-ink-muted mt-1">
                     {p.district} · {p.act === 'NH_1956' ? 'NH Act 1956' : 'RFCTLARR 2013'} ·{' '}
                     {p.current_stage?.replace(/_/g, ' ') || p.status} · {p.status}

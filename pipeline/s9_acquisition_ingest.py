@@ -34,6 +34,12 @@ VALID_STATUS = {"open", "completed", "lapsed"}
 TODAY_D = date.fromisoformat(TODAY)
 
 
+def _opt(value, cast):
+    """NULL-preserving cast. A measure the source never published stays
+    None on the way through, rather than becoming 0, 'nan' or 'None'."""
+    return cast(value) if pd.notna(value) else None
+
+
 def _load(fname, cols):
     path = os.path.join(DATA_IN, fname)
     if not os.path.exists(path):
@@ -60,10 +66,30 @@ def run():
     if dup_stage.any():
         raise ContractError("project_stages has duplicate (project_id, stage) rows")
 
-    stray_district = set(acq.district.dropna().unique()) - set(ACQUISITION_DISTRICTS)
+    # The contracted district set bounds the GENERATED corpus. Real rows are
+    # wherever the gazette says they are (seventeen states in the first
+    # harvest) - the honest scope of the public record, not a violation.
+    synthetic = acq[acq.source_label == "synthetic"]
+    stray_district = set(synthetic.district.dropna().unique()) - set(ACQUISITION_DISTRICTS)
     if stray_district:
-        raise ContractError("acquisitions has districts outside the contracted set: "
-                            + str(stray_district))
+        raise ContractError("synthetic acquisitions has districts outside the contracted "
+                            "set: " + str(stray_district))
+
+    real = acq[acq.source_label == "real"]
+    if real.district.isna().any() or real.state.isna().any():
+        raise ContractError("real acquisitions with no state/district - the gazette "
+                            "names both on every notification")
+    # Measures the gazette never publishes must arrive NULL on real rows
+    # (handoff spec, section 3): a value here would be an imputation
+    # dressed as a measurement, indistinguishable downstream.
+    for col in ("affected_families", "budget_estimate_inr", "executing_agency", "block"):
+        if real[col].notna().any():
+            raise ContractError(f"real acquisitions carry a value in {col}, which the "
+                                "gazette never publishes - it must stay NULL")
+    real_stage_labels = set(stages[stages.project_id.isin(real.project_id)].source_label)
+    if real_stage_labels - {"real"}:
+        raise ContractError("a real project carries a non-real stage row: "
+                            + str(real_stage_labels))
     stray_act = set(acq.act.dropna().unique()) - VALID_ACTS
     if stray_act:
         raise ContractError("acquisitions has unknown act values: " + str(stray_act))
@@ -129,13 +155,14 @@ def run():
         last = rows[-1] if rows else None
         project_rows.append({
             "project_id": r.project_id, "name": r.name, "project_type": r.project_type,
-            "executing_agency": r.executing_agency, "act": r.act, "state": r.state,
-            "district": r.district, "block": r.block,
+            "executing_agency": _opt(r.executing_agency, str), "act": r.act,
+            "state": r.state, "district": r.district, "block": _opt(r.block, str),
             "villages": [v for v in (r.villages or "").split(",") if v],
-            "nh_no": r.nh_no,
-            "gazette_ref": r.gazette_ref, "area_hectares": float(r.area_hectares),
-            "affected_families": int(r.affected_families),
-            "budget_estimate_inr": float(r.budget_estimate_inr),
+            "nh_no": _opt(r.nh_no, str),
+            "gazette_ref": _opt(r.gazette_ref, str),
+            "area_hectares": _opt(r.area_hectares, float),
+            "affected_families": _opt(r.affected_families, int),
+            "budget_estimate_inr": _opt(r.budget_estimate_inr, float),
             "status": r.status,
             "gazette_republication_count": int(r.gazette_republication_count),
             "current_stage": last["stage"] if last else None,
@@ -157,7 +184,12 @@ def run():
 
     report("s9", {
         "projects": len(project_rows), "stage_rows": len(stage_rows),
+        "real_projects": sum(1 for p in project_rows if p["source_label"] == "real"),
+        "real_stage_rows": sum(1 for r in stage_rows if r["source_label"] == "real"),
+        "real_closed_stages": sum(1 for r in stage_rows
+                                  if r["source_label"] == "real" and r["completed_on"]),
         "districts": len(set(p["district"] for p in project_rows)),
+        "states": len(set(p["state"] for p in project_rows)),
         "open_stages": sum(1 for r in stage_rows if r["completed_on"] is None),
         "closed_stages": sum(1 for r in stage_rows if r["completed_on"] is not None),
         "delayed_closed_stages": sum(1 for r in stage_rows if r["is_delayed"] == 1),

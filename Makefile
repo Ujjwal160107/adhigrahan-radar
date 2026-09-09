@@ -4,7 +4,7 @@
 #   make setup     install python + node dependencies
 #   make build     regenerate data/output from the committed contract (s0-s15)
 #   make ingest    refresh data/raw from the live sources (separate, never in build)
-#   make test      324 backend/pipeline/ingest tests + 38 frontend tests, all green
+#   make test      334 backend/pipeline/ingest tests + 41 frontend tests, all green
 #   make api       serve on :8000
 #   make web       serve on :5173  (separate terminal)
 

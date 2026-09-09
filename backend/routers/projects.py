@@ -63,7 +63,7 @@ def search(district: str = "", stage: str = "", risk_band: str = "", act: str = 
     total = conn.execute(f"SELECT COUNT(DISTINCT ap.id) {base}", args).fetchone()[0]
     rows = conn.execute(
         f"""SELECT DISTINCT ap.id, ap.name, ap.district, ap.act, ap.current_stage,
-                  ap.status, ap.area_hectares, ap.affected_families,
+                  ap.status, ap.area_hectares, ap.affected_families, ap.source_label,
                   risk.risk_band, risk.delay_probability, risk.lead_time_days AS days_remaining,
                   risk.stage AS scored_stage
            {base}

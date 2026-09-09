@@ -33,11 +33,11 @@ MID = os.path.join(ROOT, "data", "intermediate")
 # Deliberately duplicated from s11_features.LANDMARK_FRACTIONS rather than
 # imported: a contract test that reads the constant from the code under
 # test cannot detect a change to that constant.
-LANDMARK_FRACTIONS = (0.25, 0.50, 0.75)
+LANDMARK_FRACTIONS = (0.0, 0.25, 0.50, 0.75)
 
 NON_FEATURE_COLS = {"project_id", "stage", "landmark_fraction", "computed_asof",
                     "is_delayed", "is_censored", "is_serving_row",
-                    "stage_completed_on", "district", "source_label"}
+                    "stage_completed_on", "stage_source_label", "district", "source_label"}
 
 
 @pytest.fixture(scope="module")
@@ -241,13 +241,31 @@ def test_compensation_share_is_not_a_copy_of_days_in_stage(features):
 
 def test_no_null_features_outside_district_context(features):
     """Only the train-only district-context column may be null (a district
-    with no closed notification stage yet); every other feature must be a
-    real, computed value on every row."""
+    with no closed notification stage yet), plus the measures the gazette
+    never publishes - and those only on gazette-sourced rows, where NULL
+    is the truth and imputation happens in s12 on the training median.
+    Every other feature must be a real, computed value on every row."""
     allowed_null = {"district_median_3a_to_3d_days"}
+    null_only_on_real_rows = {"affected_families"}
     feature_cols = [c for c in features.columns
                     if c not in NON_FEATURE_COLS and c not in allowed_null]
     for col in feature_cols:
+        if col in null_only_on_real_rows:
+            synthetic = features[features.stage_source_label != "real"]
+            assert synthetic[col].notna().all(), f"nulls in {col} on a synthetic row"
+            continue
         assert features[col].notna().all(), f"unexpected nulls in {col}"
+
+
+def test_real_stages_are_labelled_and_only_ever_the_notification_stage(features):
+    """The gazette labels one clock - 3A -> 3D. A real row on any other
+    stage would be a label the public record cannot have produced."""
+    real = features[features.stage_source_label == "real"]
+    assert len(real) > 0, "no gazette-sourced rows in the feature matrix"
+    assert set(real.stage) == {"notification_3a_11"}
+    assert set(features.stage_source_label) <= {"real", "synthetic"}
+    # and real rows never receive an invented republication count
+    assert (real.gazette_republication_count >= 0).all()
 
 
 def test_litigation_coverage_is_derived_from_the_corpus_not_a_district_name(features):

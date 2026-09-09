@@ -3,6 +3,7 @@
 """
 import json
 import os
+import sys
 
 import joblib
 import pytest
@@ -40,14 +41,47 @@ def test_all_three_baselines_reported_per_stage(runs):
                 f"{stage}: hgb_calibrated missing despite n_train={r['n_train']}")
 
 
-def test_metrics_are_labelled_synthetic_only(runs):
-    """n_test_real must be 0 and disclosed for every stage - no real
-    acquisition dataset exists in this environment, and the report must
-    say so rather than let a metric imply otherwise."""
+def test_real_holdout_is_reported_per_stage(runs):
+    """n_test_real is a per-stage count, disclosed in notes as the literal
+    `n_test_real=<n>`. Only notification_3a_11 can ever be non-zero - the
+    3A->3D interval is gazetted, awards/compensation/possession are not -
+    and where it is, the real slice of the holdout is scored on its own
+    rather than blended into the synthetic numbers."""
     for stage, r in runs.items():
-        assert r["n_test_real"] == 0, stage
-        assert r["n_test_synthetic"] == r["n_test"], stage
-        assert "n_test_real=0" in r["notes"], f"{stage} notes do not disclose n_test_real=0"
+        assert r["n_test_real"] + r["n_test_synthetic"] == r["n_test"], stage
+        assert f"n_test_real={r['n_test_real']}" in r["notes"], (
+            f"{stage} notes do not disclose n_test_real={r['n_test_real']}")
+        if stage != "notification_3a_11":
+            assert r["n_test_real"] == 0, f"{stage} can never carry real rows"
+            assert "never gazetted" in r["notes"], stage
+        if r["n_test_real"] > 0:
+            assert r["n_test_real_stages"] >= 1, stage
+            m = r["runs"][r["shipped_algo"]]
+            assert m["real_holdout"] is not None, stage
+            assert m["real_holdout"]["n_rows"] == r["n_test_real"], stage
+            assert 0.0 <= m["real_holdout"]["brier"] <= 1.0, stage
+            assert "real-holdout Brier" in r["notes"], stage
+        else:
+            assert all(m["real_holdout"] is None for m in r["runs"].values()), stage
+
+
+def test_stage_one_uses_the_gazette_intervals_the_mirror_holds(runs):
+    """If data/raw holds a 3A->3D interval closed on or before the build's
+    now, the build must have put it through s12 - trained or held out, but
+    never silently dropped."""
+    sys.path.insert(0, os.path.join(ROOT, "pipeline"))
+    from common import ACQUISITION_CONTRACT, TODAY
+    if not os.path.exists(ACQUISITION_CONTRACT):
+        pytest.skip("no gazette mirror in data/raw")
+    with open(ACQUISITION_CONTRACT, encoding="utf-8") as fh:
+        contract = json.load(fh)
+    closed = [c for c in contract
+              if c["notified_3a_on"] <= TODAY and c["declared_3d_on"]
+              and c["declared_3d_on"] <= TODAY]
+    r = runs["notification_3a_11"]
+    if closed:
+        assert r["n_test_real"] + r["n_train_real"] > 0, (
+            f"{len(closed)} closed gazette intervals exist but none reached s12")
 
 
 def test_calibration_choice_matches_sample_size(runs):

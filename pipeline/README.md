@@ -41,7 +41,7 @@ for something no user will ever see. Deliberate, not an oversight.
 
 | Stage | Does | Writes |
 |---|---|---|
-| s8_acquisition_handoff | Generates the acquisition contract deterministically (`RISK_SEED`) — no real Bhoomi Rashi snapshot exists in this environment (`data/raw/bhoomirashi/` is an empty placeholder), so every row is `source_label='synthetic'` and disclosed as such. `litigation_risk` archetype projects are routed onto villages with real RED/AMBER parcels (via `s6`'s already-built `vivaad.db`) so the litigation features and the simulated delay are causally consistent, not coincidental. Village pools are keyed **by district**, not by a hardcoded district name: a district with no linkage corpus simply has no pool | `data/input/{acquisitions,project_stages}.parquet` |
+| s8_acquisition_handoff | Builds the acquisition contract as a **hybrid** corpus: 96 synthetic projects generated deterministically (`RISK_SEED`) plus every real project in `data/raw/acquisition_projects.json` — the Gazette of India mirror `make ingest` writes — windowed at `common.TODAY`, stamped `source_label='real'` and carrying its one gazetted stage (§3A→§3D), with the measures the gazette never publishes left NULL. Synthetic `litigation_risk` archetype projects are routed onto villages with real RED/AMBER parcels (via `s6`'s already-built `vivaad.db`) so the litigation features and the simulated delay are causally consistent, not coincidental. Village pools are keyed **by district**, not by a hardcoded district name: a district with no linkage corpus simply has no pool | `data/input/{acquisitions,project_stages}.parquet` |
 | s9_acquisition_ingest | Validates: columns, provenance on every row, a resolvable statutory clock per stage, flagship project present. Computes `deadline_on`/`overdue_days`/`is_delayed` once. **Raises on any violation** | `acquisitions.json`, `project_stages.json` |
 | s10_project_bind | Binds project → parcels using `s2`'s `norm_place` + the already-computed gazetteer mapping from `normalized.json`. **No new matcher.** Only projects in a district the linkage corpus covers ever bind — today that is Sultanpur alone; `n_parcels=0` elsewhere is the honest answer, never a fabricated binding | `project_parcels.json` |
 | s11_features | 19-feature matrix per `(project, stage, landmark)` row, leakage-safe: open stages are scored once at "now", closed stages contribute one row per *statutory* landmark (0.25/0.50/0.75 of the clock) they were still open at. Runs the leakage audit and writes the shared `cutoff_date` for the time-based split | `features.parquet`, `cutoff_date.json` |
@@ -175,14 +175,21 @@ inflated claim is the cheapest possible credibility loss.
 4. **Open stages are right-censored, never scored as on-time.** A stage that
    has not finished has `is_delayed = NULL`, not `0`. Censored rows are excluded
    from training and included in scoring.
-5. **Synthetic rows may train; only real rows may score.** No real acquisition
-   dataset exists in this environment, so `n_test_real=0` for every stage,
-   always, and `ModelRun.notes` says so on every row.
-6. **Small-n model discipline.** The corpus is small (90-222 train rows per
+5. **Synthetic rows may train; only real rows may score — per stage.** The
+   corpus is hybrid (s8), and only the §3A→§3D clock is ever gazetted, so
+   `notification_3a_11` carries the real holdout (`n_test_real`, scored on its
+   own as `real_holdout`) and stages 2–5 report `n_test_real=0` with the
+   reason in `ModelRun.notes`, on every row.
+6. **Small-n model discipline.** The corpus is small (130-351 train rows per
    stage), so the feature list is capped at 19 per stage model, trees are
    shallow (`max_depth=3`, `max_leaf_nodes=8`), and a logistic-regression and
    a base-rate baseline are reported in the same table. On this corpus
-   `base_rate` wins two of five stages and ships there, reported plainly.
+   `base_rate` wins three of five stages and ships there, reported plainly.
+   A driver whose value lies outside the shipped model's training range is
+   flagged `outside_training_range` on the driver itself (s13), never
+   clipped: the real gazette projects sit outside it on village count and
+   area, and the officer must see that the model is reasoning past its
+   evidence there.
 9. **A HIGH band must clear the stage's own base rate.** `t_high` is the
    lowest holdout probability reaching 0.70 precision *that is also at or
    above the rate at which the stage overruns anyway*; otherwise HIGH is
@@ -232,9 +239,12 @@ chosen **without reference to the outcome being predicted**.
 
 Open stages are scored once, at the real build "now". Closed (training)
 stages are observed at fixed **landmarks** on the *statutory* clock -
-`started_on + f * statutory_days` for `f` in `(0.25, 0.50, 0.75)` - and a
-row is emitted only for the landmarks the stage was still open at, which
-is exactly the condition under which `s13` scores a row in production.
+`started_on + f * statutory_days` for `f` in `(0.0, 0.25, 0.50, 0.75)` - and
+a row is emitted only for the landmarks the stage was still open at, which
+is exactly the condition under which `s13` scores a row in production. The
+`0.0` landmark is the day a stage opens: a freshly gazetted notification is
+scored the day it appears, and the first harvest's real open rows were all
+under a week old, so the model must have seen elapsed-time zero in training.
 Landmarks stay strictly below `1.0`: a stage still open at
 `1.0 * statutory_days` has already breached its deadline, so its label
 would be `1` by definition.

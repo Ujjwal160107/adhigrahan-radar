@@ -8,7 +8,11 @@ uvicorn==0.30.*
 
 # --- offline build: linkage engine (s0-s7) -------------------------------
 pandas==2.2.*
-pyarrow==17.*
+# 18 is the first series with a CPython 3.13 wheel. The Makefile's BASE_PY
+# probe prefers python3.13, so a 17.* pin sent every 3.13-newest machine
+# into a from-source build that died on a missing pkg_resources - the exact
+# opaque failure the probe exists to prevent.
+pyarrow==18.*
 rapidfuzz==3.9.*
 
 # --- offline build: risk engine (s8-s15) ---------------------------------

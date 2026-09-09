@@ -87,9 +87,27 @@ describe('ModelHistory', () => {
     expect(screen.getByText(/No algorithm could be fitted/i)).toBeInTheDocument();
   });
 
-  it('always discloses that no real acquisition data backs these metrics', async () => {
+  it('discloses a wholly synthetic holdout when no stage carries real rows', async () => {
     getModelHistory.mockResolvedValue({ runs: [run()] });
     render(<ModelHistory />);
-    expect(await screen.findByText(/No real acquisition dataset/i)).toBeInTheDocument();
+    expect(await screen.findByText(/No real acquisition rows reached/i)).toBeInTheDocument();
+    expect(screen.getByText(/n_test_real = 0 for every stage/i)).toBeInTheDocument();
+  });
+
+  it('names the one stage real gazette rows back, and says the rest are synthetic', async () => {
+    // Which stages are real is read from the registry, never assumed:
+    // only the 3A->3D interval is ever gazetted, and s12 counts it per stage.
+    getModelHistory.mockResolvedValue({
+      runs: [
+        run({ stage: 'notification_3a_11', n_test_real: 52, n_test_real_stages: 40,
+          n_test_synthetic: 60, n_test: 112 }),
+        run(),
+      ],
+    });
+    render(<ModelHistory />);
+    expect(await screen.findByText(/Real data reaches one stage only/i)).toBeInTheDocument();
+    expect(screen.getByText(/52 real holdout rows/i)).toBeInTheDocument();
+    expect(screen.getByText(/40 gazette intervals/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No real acquisition rows reached/i)).not.toBeInTheDocument();
   });
 });

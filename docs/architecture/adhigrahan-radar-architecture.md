@@ -241,9 +241,11 @@ Every row in the build carries a label from the PRD §21 set: `real`, `synthetic
 | Delay probabilities, SHAP drivers | `model_generated` |
 | Alerts and notifications | not built — no notification/alert feature exists in this system |
 
-**Hard rule: no `synthetic` row contributes to any metric shown to a judge.** Synthetic rows
-may train; only real rows may score (`n_test_real=0` for every stage today, and every
-`ModelRun.notes` says so).
+**Hard rule: no `synthetic` row contributes to any metric reported as real.** Synthetic rows
+may train; only real rows may score, and they are scored on their own, per stage
+(`runs[algo].real_holdout`, `n_test_real` per stage). The gazette labels one clock, so
+`notification_3a_11` carries the real holdout (40 §3A→§3D intervals in the shipped build)
+and stages 2–5 report `n_test_real=0` with the reason in `ModelRun.notes`.
 
 ---
 

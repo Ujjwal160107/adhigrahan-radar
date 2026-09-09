@@ -2,17 +2,26 @@
 the base-rate and logistic-regression baselines the spec requires
 alongside it in the same table.
 
-Honesty rule this stage must obey (docs/plans/2026-09-09-adhigrahan-radar-
-implementation-blueprint.md risk X-1): no real Bhoomi Rashi acquisition
-snapshot was available to build this corpus, so `n_test_real` is 0 for
-every stage, always. That is written into every ModelRun row, not hidden.
-Per the project's own rule ("only real data may appear in a reported
-metric"), the numbers below are a **diagnostic of the mechanism**, not a
+Honesty rule this stage must obey (ingestion design, section 6, rule 2): a
+metric may be reported as real only for a stage where the rows behind it
+are real, and the corpus is hybrid (s8). Only `notification_3a_11` can
+ever have real rows - its s.3A -> s.3D interval is gazetted; awards,
+compensation and possession are not - so `n_test_real` is counted and
+written PER STAGE, and the real slice of a holdout is scored on its own
+(`runs[algo].real_holdout`) rather than blended into the synthetic one.
+Stages 2-5 report `n_test_real=0` and say why. Everywhere the holdout is
+synthetic, the numbers are a **diagnostic of the mechanism**, not a
 validated performance claim - `ModelRun.notes` says so on every row, and
 the officer-facing UI and docs must repeat it. Suppressing the HIGH band
-outright because n_test_real=0 would make this build unable to demonstrate
+outright wherever n_test_real=0 would make this build unable to demonstrate
 its own threshold-selection logic at all; disclosing loudly instead is the
 more honest failure mode of the two.
+
+A young harvest's real slice is single-class by construction: a lapsed
+s.3A never yields a s.3D, so every CLOSED real interval is on time, and
+real positives can only ever appear as open notifications that outlive
+their clock. ROC-AUC on that slice is therefore undefined until the
+harvest is old enough to contain a lapse; Brier is reported meanwhile.
 
 Time-based split: train on rows observed on/before the shared cutoff_date
 (data/intermediate/cutoff_date.json, written by s11), test on rows observed
@@ -63,6 +72,12 @@ from sklearn.metrics import (
 from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+from threadpoolctl import threadpool_limits
+
+# See common.py: a few hundred rows per stage, and OpenMP fan-out in the
+# tree grower spun for minutes under CPU contention. Applied here as well
+# as via the environment so it holds even if sklearn was imported first.
+_OPENMP_SINGLE_THREAD = threadpool_limits(limits=1, user_api="openmp")
 
 MODEL_VERSION = f"mv-{TODAY.replace('-', '')}-01"
 MODELS_DIR = os.path.join(DATA_OUT, "models")
@@ -90,7 +105,8 @@ def _safe_auc(y_true, p, fn):
 def _select_thresholds(y_test, p_test, base_rate=None):
     """t_high = lowest p that clears 0.70 holdout precision AND sits at or
     above the stage's own base rate (else HIGH is suppressed entirely);
-    t_med = lowest p with holdout recall >= 0.80.
+    t_med = the highest p that still recalls >= 0.80 of the holdout
+    positives - the most selective MEDIUM cut, never the least.
 
     The base-rate floor is not a tuning knob, it is what makes the band
     mean anything. A HIGH cut below the rate at which the stage overruns
@@ -119,11 +135,17 @@ def _select_thresholds(y_test, p_test, base_rate=None):
         if prec >= PRECISION_TARGET:
             t_high = t
             break
+    # t_med: the MOST selective cutoff that still recalls >= 80% of the
+    # holdout positives, so candidates are walked from the top. Walking them
+    # from the bottom and stopping at the first that qualified returned the
+    # minimum holdout probability every time - everything is recalled at
+    # the lowest cut - so MEDIUM meant "not the single lowest-scoring row".
+    # On the first gazette rows that put fourteen of fifteen fresh
+    # notifications at MEDIUM with probabilities under 0.1.
     t_med = None
-    for t in candidates:
+    for t in reversed(candidates):
         pred = (p_test >= t).astype(int)
-        rec = recall_score(y_test, pred, zero_division=0)
-        if rec >= RECALL_TARGET:
+        if recall_score(y_test, pred, zero_division=0) >= RECALL_TARGET:
             t_med = t
             break
     if t_high is None:
@@ -136,6 +158,49 @@ def _select_thresholds(y_test, p_test, base_rate=None):
     if t_med is not None and t_med > t_high:
         t_med = t_high  # clamp: MEDIUM cannot start above HIGH's own floor
     return {"t_high": t_high, "t_med": t_med}, t_high, t_med
+
+
+def _real_holdout(y_test, p_test, mask, n_stages):
+    """Metrics on the gazette-sourced slice of the holdout alone, or None
+    when there is no such slice. `roc_auc` is None while the real rows are
+    a single class - see the module docstring for why a young harvest
+    always is."""
+    if not mask.any():
+        return None
+    y, p = y_test[mask], p_test[mask]
+    return {
+        "n_rows": int(mask.sum()), "n_stages": n_stages,
+        "positive_rate": float(y.mean()),
+        "brier": float(brier_score_loss(y, p)),
+        "roc_auc": _safe_auc(y, p, roc_auc_score),
+    }
+
+
+def _provenance_note(stage, n_test, n_test_real, n_test_real_stages, real):
+    """The first sentence of every ModelRun.notes: what this stage's holdout
+    is made of, in the words the registry screen and the docs repeat.
+    Always contains the literal `n_test_real=<n>`."""
+    if n_test_real == 0:
+        why = ("this stage is never gazetted (awards, compensation and possession are "
+               "not published), so every label for it is synthetic by construction"
+               if stage != "notification_3a_11" else
+               "no gazette-sourced 3A->3D interval fell inside this build's holdout window")
+        return (f"n_test_real=0: {why}; metrics below are a synthetic-holdout "
+                "diagnostic of the mechanism, not a validated performance claim")
+    parts = [f"n_test_real={n_test_real} ({n_test_real_stages} gazette-sourced 3A->3D "
+             f"intervals as {n_test_real} landmark rows) of n_test={n_test}"]
+    if real:
+        parts.append(f"real-holdout Brier={real['brier']:.4f}")
+        if real["roc_auc"] is None:
+            parts.append("real-holdout ROC-AUC undefined: every real interval closed on "
+                         "time, because a lapsed 3A never yields a 3D - real positives "
+                         "can only appear as open notifications that outlive their "
+                         "clock, and this harvest is too young to contain one")
+        else:
+            parts.append(f"real-holdout ROC-AUC={real['roc_auc']:.3f}")
+    parts.append("the synthetic remainder of the holdout is a diagnostic of the "
+                 "mechanism, not a validated performance claim")
+    return "; ".join(parts)
 
 
 def _fit_hgb(runs, X_train, y_train, groups, calibration, n_train):
@@ -177,6 +242,16 @@ def _train_one_stage(stage, train, test, cutoff, groups=None):
 
     n_train, n_test = len(X_train), len(X_test)
     calibration = "isotonic" if n_train >= ISOTONIC_MIN_ROWS else "sigmoid"
+
+    # Provenance of each split, per stage. The real slice of the holdout is
+    # counted here and scored separately in the metrics loop below.
+    real_test_mask = ((test["stage_source_label"] == "real").values
+                      if n_test else np.zeros(0, dtype=bool))
+    real_train_mask = ((train["stage_source_label"] == "real").values
+                       if n_train else np.zeros(0, dtype=bool))
+    n_test_real, n_train_real = int(real_test_mask.sum()), int(real_train_mask.sum())
+    n_test_real_stages = (int(test.loc[real_test_mask, "project_id"].nunique())
+                          if n_test_real else 0)
 
     runs, untrainable = {}, []
 
@@ -227,6 +302,7 @@ def _train_one_stage(stage, train, test, cutoff, groups=None):
             "brier": float(brier_score_loss(y_test, p_test)) if n_test else None,
             "train_brier": float(brier_score_loss(y_train, p_train)),
             "train_positive_rate": float(y_train.mean()) if n_train else None,
+            "real_holdout": _real_holdout(y_test, p_test, real_test_mask, n_test_real_stages),
         }
         results[algo] = {"model": model, "metrics": metrics, "p_test": p_test}
 
@@ -249,9 +325,9 @@ def _train_one_stage(stage, train, test, cutoff, groups=None):
     ) if shipped_algo in results else (
         {"high": "suppressed", "reason": "no scoreable model"}, None, None)
 
-    notes = ["n_test_real=0: no real acquisition dataset available in this "
-            "environment; metrics below are a synthetic-holdout diagnostic "
-            "of the mechanism, not a validated performance claim"]
+    notes = [_provenance_note(
+        stage, n_test, n_test_real, n_test_real_stages,
+        results[shipped_algo]["metrics"]["real_holdout"] if shipped_algo in results else None)]
     if shipped_algo == "base_rate":
         notes.append("base_rate had the lowest holdout Brier score for this "
                      "stage: the learned models did not generalise better "
@@ -271,7 +347,9 @@ def _train_one_stage(stage, train, test, cutoff, groups=None):
         # sample size and every metric below should be read against them.
         "n_train_stages": int(train["project_id"].nunique()) if n_train else 0,
         "n_test_stages": int(test["project_id"].nunique()) if n_test else 0,
-        "n_test_real": 0, "n_test_synthetic": n_test,
+        "n_train_real": n_train_real,
+        "n_test_real": n_test_real, "n_test_real_stages": n_test_real_stages,
+        "n_test_synthetic": n_test - n_test_real,
         "cutoff_date": cutoff.isoformat(),
         "calibration": calibration, "shipped_algo": shipped_algo,
         "thresholds": thresholds,
@@ -286,6 +364,12 @@ def _train_one_stage(stage, train, test, cutoff, groups=None):
             "model": results[shipped_algo]["model"],
             "medians": medians.to_dict(),
             "features": FEATURE_COLUMNS,
+            # What the model actually saw. s13 flags a driver whose value
+            # falls outside this range as an extrapolation - a real gazette
+            # project spanning 50 villages against a synthetic corpus that
+            # tops out at three must not be presented as a learned effect.
+            "feature_ranges": {c: [float(X_train[c].min()), float(X_train[c].max())]
+                               for c in FEATURE_COLUMNS},
             "stage": stage, "algo": shipped_algo,
             "model_version": MODEL_VERSION,
             "thresholds": thresholds,
@@ -328,6 +412,7 @@ def run():
         "shipped": {r["stage"]: r["shipped_algo"] for r in stage_reports},
         "high_band_suppressed": [r["stage"] for r in stage_reports
                                  if r["thresholds"].get("high") == "suppressed"],
+        "n_test_real": {r["stage"]: r["n_test_real"] for r in stage_reports},
         "cutoff_date": cutoff.isoformat(),
     })
 

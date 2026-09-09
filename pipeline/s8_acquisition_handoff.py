@@ -4,20 +4,33 @@ Two files, exactly as contracted:
   acquisitions.parquet    one row per project
   project_stages.parquet  one row per (project, stage) actually reached
 
-No real Bhoomi Rashi 3A/3D snapshot is available in this environment
-(data/raw/bhoomirashi/ is an empty placeholder - nothing has been scraped or
-cached there). Rather than pretend an unavailable government dataset was
-used, every row here is generated and stamped `source_label='synthetic'`.
-This is disclosed, not hidden: docs/plans/2026-09-09-adhigrahan-radar-
-implementation-blueprint.md risk X-1 records the decision and its
-consequence - s12's honesty rule ("only real data may appear in a reported
-metric") means no metric trained on this corpus may be reported as if it
-came from real government records. It exists so the *mechanism* - per-stage
-calibrated delay prediction with litigation as a feature - is real,
-reproducible and testable end to end, on labels that are causally
-consistent with the features (a litigation-heavy project really does run
-long in this corpus, not by coincidence but because the generator makes it
-so), even though the corpus itself is not.
+The corpus is HYBRID (ingestion design, section 1, option (c) of blueprint
+risk X-1): real rows where a government record exists, synthetic rows to
+reach trainable volume, every row labelled either way and separable by a
+`WHERE source_label = ...`.
+
+Real rows come from `data/raw/acquisition_projects.json`, the contract the
+ingest layer writes from the Gazette of India (`make ingest`, never part of
+this build - the build reads the mirror and never opens a socket). Each
+real project is one gazetted stretch of highway with its s.3A date and, if
+published, its s.3D date; that pair is the s.3D(3) 365-day statutory clock
+and maps onto `notification_3a_11` exactly (handoff spec, section 2).
+Awards under s.3G, compensation and possession are never gazetted, so a
+real project carries that ONE stage and no other - a limit of the public
+record, not of this pipeline, and the reason the model registry reports
+`n_test_real` per stage. Measures the gazette does not publish
+(`affected_families`, `budget_estimate_inr`, `executing_agency`, `block`)
+stay NULL on real rows: an imputed value that reached the contract would be
+indistinguishable from a measurement, which is what honesty rule 1 exists
+to prevent. `load_real_projects` is the only place real rows are made.
+
+Synthetic rows are generated and stamped `source_label='synthetic'`. They
+exist so the *mechanism* - per-stage calibrated delay prediction with
+litigation as a feature - is real, reproducible and testable end to end,
+on labels that are causally consistent with the features (a
+litigation-heavy project really does run long in this corpus, not by
+coincidence but because the generator makes it so), even though the rows
+themselves are not records of anything.
 
 The real litigation corpus (s0-s7) covers one district, so that is the only
 district where `litigation_coverage=1` is possible; the other seven exist to
@@ -40,6 +53,7 @@ from datetime import date, timedelta
 
 import pandas as pd
 from common import (
+    ACQUISITION_CONTRACT,
     ACQUISITION_DISTRICTS,
     DATA_IN,
     DATA_MID,
@@ -53,12 +67,18 @@ from common import (
     STAGE_ORDER,
     STATUS_RANK,
     TODAY,
+    canon_district,
     clock_authority,
     parcel_status,
     report,
 )
 
 TODAY_D = date.fromisoformat(TODAY)
+
+# The one stage the public record labels. s.3A -> s.3D is the s.3D(3)
+# 365-day clock; `notification_3a_11` already carries that authority.
+REAL_STAGE = "notification_3a_11"
+REAL_ACT = "NH_1956"
 
 PROJECT_TYPES = {
     "highway": ("NHAI", "NH_1956"),
@@ -328,6 +348,103 @@ def _build_project(pid, district, seq, archetype, rng, village_pools,
     }
 
 
+def load_real_projects(today=TODAY_D, path=ACQUISITION_CONTRACT):
+    """Real acquisition rows from the ingest contract, windowed at the
+    build's "now".
+
+    The contract mirrors the source faithfully and does not filter by
+    TODAY - deciding what is in-window is the consumer's job (ingestion
+    design, "the build's fictional now"). Applied here, once:
+
+      - a notification published after `today` does not exist yet and is
+        dropped, not carried as a project that starts in the future;
+      - a declaration published after `today` has not happened yet, so the
+        stage is OPEN as of the build: `completed_on` is None and s9 leaves
+        `is_delayed` NULL. Censoring, never coercion.
+
+    Returns (projects, stage_rows, stats). Soft-fails to an empty corpus
+    when the contract is absent: `make build` on a fresh clone must work
+    exactly as it did before the source layer existed, and the honest
+    answer to "no harvest yet" is zero real rows, reported, not a crash.
+
+    Deterministic: sorted by project_id, no randomness anywhere. A real
+    project's id is the ingest layer's `PRJ-<district>-G<gazette doc id>`,
+    kept verbatim so any figure in the product traces back to a
+    retrievable government PDF.
+    """
+    stats = {"contract_present": os.path.exists(path), "real_projects": 0,
+             "real_closed": 0, "real_open": 0, "not_yet_notified": 0,
+             "declared_after_today": 0, "open_past_clock": 0}
+    if not stats["contract_present"]:
+        return [], [], stats
+    with open(path, encoding="utf-8") as fh:
+        raw = json.load(fh)
+
+    clock = STAGE_CLOCKS[REAL_STAGE]
+    projects, stage_rows = [], []
+    for r in sorted(raw, key=lambda r: r["project_id"]):
+        notified = date.fromisoformat(r["notified_3a_on"])
+        if notified > today:
+            stats["not_yet_notified"] += 1
+            continue
+        declared = date.fromisoformat(r["declared_3d_on"]) if r.get("declared_3d_on") else None
+        if declared is not None and declared > today:
+            stats["declared_after_today"] += 1
+            declared = None
+
+        # One district per contract row today (no multi-district project in
+        # the harvest); the first is the anchoring one if that ever changes.
+        districts = [canon_district(d) for d in (r.get("districts") or []) if d]
+        district = districts[0] if districts else canon_district(r.get("state") or "Unknown")
+        state = canon_district(r.get("state") or "Unknown")
+        nh_no = r.get("nh_no") or None
+        km_from, km_to = r.get("km_from"), r.get("km_to")
+        stretch = (f", km {km_from:g}-{km_to:g}"
+                   if km_from is not None and km_to is not None else "")
+        name = f"{nh_no or 'Greenfield alignment'} land acquisition, {district}{stretch}"
+        doc_ids = [int(d) for d in (r.get("source_doc_ids") or [])]
+        gazette_ref = " / ".join(
+            x for x in [r.get("so_number"), *(f"eGazette {d}" for d in doc_ids)] if x)
+
+        if declared is None and (today - notified).days > clock["statutory_days"]:
+            # Under s.3D(3) a notification with no declaration inside the
+            # clock ceases to have effect. Counted so the day a harvest
+            # contains one it is visible, but NOT turned into a label here:
+            # the stage stays open/censored, the same rule as everywhere
+            # else, until the pipeline grows an explicit lapse verdict.
+            stats["open_past_clock"] += 1
+
+        projects.append({
+            "project_id": r["project_id"], "name": name, "project_type": "highway",
+            "executing_agency": None, "act": REAL_ACT, "state": state,
+            "district": district, "block": None,
+            "villages": ",".join(v for v in (r.get("villages") or []) if v),
+            "nh_no": nh_no, "gazette_ref": gazette_ref,
+            "area_hectares": (float(r["area_hectares"])
+                              if r.get("area_hectares") is not None else None),
+            "affected_families": None,          # never published - see docstring
+            "budget_estimate_inr": None,        # never published
+            # The acquisition continues into stages the gazette never
+            # publishes, so a declared s.3D is not a completed project.
+            "status": "open",
+            "gazette_republication_count": int(r.get("republication_count") or 0),
+            "archetype": "real",
+            "source_label": "real",
+        })
+        stage_rows.append({
+            "project_id": r["project_id"], "stage": REAL_STAGE, "stage_order": clock["order"],
+            "statutory_days": clock["statutory_days"],
+            "clock_source": clock["clock_source"],
+            "clock_authority": clock_authority(REAL_STAGE, REAL_ACT),
+            "started_on": notified.isoformat(),
+            "completed_on": declared.isoformat() if declared else None,
+            "source_label": "real",
+        })
+        stats["real_projects"] += 1
+        stats["real_closed" if declared else "real_open"] += 1
+    return projects, stage_rows, stats
+
+
 def build():
     rng = random.Random(RISK_SEED)
     projects, stage_rows = [], []
@@ -386,6 +503,13 @@ def build():
             projects.append(rec["acquisition"])
             stage_rows.extend(rec["stages"])
 
+    # ---- real rows, from the Gazette mirror, after the synthetic corpus so
+    # the seeded RNG consumes exactly what it did before and every synthetic
+    # id/date is byte-identical to a build without a harvest ----
+    real_projects, real_stages, real_stats = load_real_projects()
+    projects.extend(real_projects)
+    stage_rows.extend(real_stages)
+
     acq_df = pd.DataFrame(projects)
     stage_df = pd.DataFrame(stage_rows)
 
@@ -399,7 +523,16 @@ def build():
 
     report("s8", {
         "projects": len(acq_df), "stage_rows": len(stage_df),
+        "synthetic_projects": int((acq_df["source_label"] == "synthetic").sum()),
+        "real_projects": real_stats["real_projects"],
+        "real_closed_3a_3d": real_stats["real_closed"],
+        "real_open_3a": real_stats["real_open"],
+        "real_dropped_not_yet_notified": real_stats["not_yet_notified"],
+        "real_censored_declared_after_today": real_stats["declared_after_today"],
+        "real_open_past_clock": real_stats["open_past_clock"],
+        "contract_present": real_stats["contract_present"],
         "districts": acq_df["district"].nunique(),
+        "states": acq_df["state"].nunique(),
         "status_counts": acq_df["status"].value_counts().to_dict(),
         "archetype_counts": acq_df["archetype"].value_counts().to_dict(),
         "flagship": FLAGSHIP_PROJECT_ID,

@@ -5,6 +5,19 @@ PRD 36/48/49). Nothing here may be imported by request-time code.
 """
 import json
 import os
+import re
+
+# Small-data build. Every fit in s12 and every predict in s13 runs on a few
+# hundred rows, where OpenMP fan-out buys nothing and can cost everything:
+# on a loaded machine sklearn's HistGradientBoosting spun for minutes in
+# its thread barrier on a 50-row fit that takes 20 ms single-threaded, and
+# the build looked hung at s12. One thread is also what makes the
+# histogram sums order-stable, so a rebuild is byte-identical. This module
+# is the first import of every stage, so the runtime reads it before any
+# OpenMP library loads; `setdefault` leaves an operator's explicit choice
+# alone. s12/s13 repeat the limit at runtime via threadpoolctl in case a
+# caller imported sklearn first.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_IN = os.path.join(ROOT, "data", "input")
@@ -12,6 +25,14 @@ DATA_MID = os.path.join(ROOT, "data", "intermediate")
 DATA_OUT = os.path.join(ROOT, "data", "output")
 FALLBACK = os.path.join(DATA_OUT, "fallback")
 DB = os.path.join(DATA_OUT, "vivaad.db")
+
+# The source layer's mirror of real government records (`make ingest`,
+# ingest/README.md). The build only ever READS this directory and never
+# opens a socket; the two files below are the contract the risk engine
+# consumes, specified in docs/specs/2026-09-10-acquisition-contract-handoff.md.
+RAW_DIR = os.path.join(ROOT, "data", "raw")
+ACQUISITION_CONTRACT = os.path.join(RAW_DIR, "acquisition_projects.json")
+TARGET_DISTRICTS = os.path.join(RAW_DIR, "target_districts.json")
 
 # The single source of truth for every table. backend/db.py:init_schema
 # loads the same file, so the pipeline and the backend can never define the
@@ -30,7 +51,15 @@ SEED = 20260820
 # used to be spelled three times - here, in s0 as a Timestamp, in s1 as a
 # literal - and two of the three had drifted a day apart, which silently
 # widened the contract check s1 exists to enforce.
-TODAY = "2026-08-21"
+#
+# Pinned to the date of the first Gazette harvest (ingest design, "verified
+# live on 2026-09-10"). A "now" that predates the real records the build
+# consumes would make most of them invisible: s8 windows the contract at
+# this date, so a notification published after it does not exist yet and
+# a declaration published after it has not happened yet. Moving this
+# earlier is legitimate - it is exactly how a historical replay would be
+# run - but it censors real rows accordingly, and s8 reports how many.
+TODAY = "2026-09-10"
 
 # ---- risk engine (s8-s15) --------------------------------------------------
 
@@ -67,6 +96,29 @@ def _district_abbreviations(districts):
 
 
 DISTRICT_ABBR = _district_abbreviations(ACQUISITION_DISTRICTS)
+
+
+def canon_district(name):
+    """One spelling per place, across the two corpora.
+
+    The gazette prints `SULTANPUR`, `KAIMUR (BHABUA )`, `TUTICORIN( Thoothukudi)`;
+    the synthetic corpus and the litigation corpus use `Sultanpur`. Left
+    alone they are two districts for one place and every district-level
+    feature and filter splits in half (handoff spec, section 5). A name that
+    matches a contracted district case-insensitively takes that exact
+    spelling; anything else is title-cased word by word with the gazette's
+    stray whitespace collapsed. Mixed-case input (`East Jaintia Hills`,
+    `Ri-Bhoi`) is already a spelling and is left alone."""
+    if not name:
+        return name
+    cleaned = re.sub(r"\s+", " ", name).replace("( ", "(").replace(" )", ")").strip()
+    for district in ACQUISITION_DISTRICTS:
+        if district.lower() == cleaned.lower():
+            return district
+    return re.sub(r"[A-Za-z]+",
+                  lambda m: m.group(0).capitalize()
+                  if m.group(0).isupper() or m.group(0).islower() else m.group(0),
+                  cleaned)
 
 # Five lifecycle stages with a resolvable statutory clock. A sixth,
 # r_and_r (rehabilitation & resettlement), runs in parallel rather than in

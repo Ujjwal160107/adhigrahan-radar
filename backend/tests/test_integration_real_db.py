@@ -100,12 +100,27 @@ def test_projects_filter_by_risk_band(real_client):
     assert all(p["risk_band"] == "HIGH" for p in body["projects"])
 
 
-def test_models_history_discloses_synthetic_only_metrics(real_client):
+def test_models_history_discloses_holdout_provenance_per_stage(real_client):
+    """Every stage says how much of its holdout is real, as a literal in
+    notes; only the gazetted 3A->3D stage may be non-zero, and at least
+    one stage must be once the gazette mirror is wired in."""
     body = real_client.get("/models/history").json()
     assert len(body["runs"]) == 5
     for run in body["runs"]:
-        assert run["n_test_real"] == 0
-        assert "n_test_real=0" in run["notes"]
+        assert f"n_test_real={run['n_test_real']}" in run["notes"]
+        if run["stage"] != "notification_3a_11":
+            assert run["n_test_real"] == 0
+    assert any(run["n_test_real"] > 0 for run in body["runs"]), (
+        "no stage reports real holdout rows - the gazette contract is not reaching s12")
+
+
+def test_projects_list_carries_provenance_for_real_and_synthetic_rows(real_client):
+    body = real_client.get("/projects?limit=200").json()
+    labels = {p["source_label"] for p in body["projects"]}
+    assert labels >= {"real", "synthetic"}, labels
+    real = [p for p in body["projects"] if p["source_label"] == "real"]
+    assert all(p["affected_families"] is None for p in real), (
+        "a gazette-sourced project reports affected_families, which is never published")
 
 
 def test_auth_session_default_role(real_client):

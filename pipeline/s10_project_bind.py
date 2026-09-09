@@ -47,10 +47,16 @@ def run():
 
     con = sqlite3.connect(DB)
     con.row_factory = sqlite3.Row
+    # Keyed by (district, village), not village alone. Village names repeat
+    # across districts, and the corpus now holds real projects in dozens of
+    # them: a gazetted project in Barabanki whose village shares a name with
+    # a Sultanpur village must not bind to the Sultanpur parcel. A catchment
+    # is a district's, and a cross-district hit would be a fabricated link.
     parcels_by_canon = {}
-    for row in con.execute("SELECT id, village_canon FROM Parcel"):
+    for row in con.execute("SELECT id, district, village_canon FROM Parcel"):
         if row["village_canon"]:
-            parcels_by_canon.setdefault(row["village_canon"], []).append(row["id"])
+            parcels_by_canon.setdefault(
+                (row["district"], row["village_canon"]), []).append(row["id"])
     con.close()
 
     now = datetime.now(UTC).isoformat(timespec="seconds")
@@ -59,7 +65,7 @@ def run():
         for raw_village in p["villages"]:
             norm = norm_place(raw_village)
             canon = village_mapping.get(norm, norm)
-            for parcel_id in parcels_by_canon.get(canon, []):
+            for parcel_id in parcels_by_canon.get((p["district"], canon), []):
                 bindings.append({
                     "project_id": p["project_id"], "parcel_id": parcel_id,
                     "village_canon": canon,
