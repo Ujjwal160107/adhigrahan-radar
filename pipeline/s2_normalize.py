@@ -10,9 +10,8 @@ import os
 import re
 import unicodedata
 
-from rapidfuzz import fuzz
-
 from common import DATA_MID, report
+from rapidfuzz import fuzz
 
 HONORIFICS = {"smt", "shri", "sri", "ms", "mr", "mrs", "dr", "late", "m/s"}
 PAT = re.compile(r"(s/o|son of|d/o|daughter of|w/o|wife of)", re.I)

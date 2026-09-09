@@ -3,7 +3,6 @@ import { ParcelDetail, LitigationResponse, CaseDetail } from '../types/api';
 import { api } from '../api/client';
 import { CaseDetailModal } from '../components/CaseDetailModal';
 import {
-  NOT_FOUND_CONFIDENCE,
   buildTimeline,
   partyCaption,
   pct,
@@ -75,19 +74,18 @@ export const Result: React.FC<ResultProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [watchlistSubscribed, setWatchlistSubscribed] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const displaySurvey = parcel?.survey_no || searchQuery.surveyNo || '—';
-  const displayVillage = parcel?.village || searchQuery.village || 'Sultanpur';
+  const displayVillage = parcel?.village || searchQuery.village || '—';
   const status = notFound ? 'GREEN' : (litigation?.status || parcel?.status || 'GREEN');
   const linkedCases = litigation?.links || [];
   const primaryLink = linkedCases[0];
-  const confidencePercent = Math.round(
-    (litigation?.confidence ?? (notFound ? NOT_FOUND_CONFIDENCE : 0)) * 100,
-  );
+  const confidencePercent = Math.round((litigation?.confidence ?? 0) * 100);
   const caption = partyCaption(caseDetail?.parties);
   const why =
     notFound
-      ? 'This survey number does not appear in the Sultanpur court-linked parcel index, and no order in the Allahabad High Court land-matter corpus cites it. No candidate litigation link was generated.'
+      ? 'This survey number does not appear in the court-linked parcel index, and no order in the indexed High Court land-matter corpus cites it. No candidate litigation link was generated.'
       : (litigation?.note || primaryLink?.reason || 'No matching active litigation found in available records.');
   const evidence = primaryLink?.evidence;
   const weights = evidence?.weights_used || {};
@@ -99,7 +97,7 @@ export const Result: React.FC<ResultProps> = ({
         {
           date: new Date().toISOString().slice(0, 10),
           title: 'Index sweep complete',
-          detail: `Survey ${displaySurvey} · ${displayVillage} — 0 hits in 38 Sultanpur cases`,
+          detail: `Survey ${displaySurvey} · ${displayVillage} — no hits in the indexed court record`,
           kind: 'clean' as const,
         },
         {
@@ -114,23 +112,26 @@ export const Result: React.FC<ResultProps> = ({
   const handleOpenCaseModal = async (caseId?: string) => {
     const id = caseId || primaryLink?.case_id;
     if (!id) return;
+    setActionError(null);
     try {
       const detail = caseDetail && caseDetail.id === id ? caseDetail : await api.getCase(id);
       setSelectedCase(detail);
       setIsModalOpen(true);
     } catch (err) {
       console.error('Failed to load case detail', err);
+      setActionError('Could not load the case dossier. Try again.');
     }
   };
 
   const handleWatchlist = async () => {
     if (!parcel?.id) return;
     setIsSubscribing(true);
+    setActionError(null);
     try {
-      await api.subscribeWatchlist(parcel.id);
+      await api.subscribeWatchlist({ parcelId: parcel.id });
       setWatchlistSubscribed(true);
     } catch (err) {
-      console.error(err);
+      setActionError(err instanceof Error ? err.message : 'Could not add this parcel to the watchlist.');
     } finally {
       setIsSubscribing(false);
     }
@@ -305,23 +306,23 @@ export const Result: React.FC<ResultProps> = ({
                       <td className="p-3.5 text-ink-muted">{parcel?.survey_no || displaySurvey}</td>
                       <td className="p-3.5 text-black">{courtSurvey}</td>
                       <td className="p-3.5 text-radar-green font-semibold">{surveyMatchLabel(evidence.survey_match)}</td>
-                      <td className="p-3.5 text-right font-bold">{weights.identifier ?? 0.4}</td>
+                      <td className="p-3.5 text-right font-bold">{weights.identifier ?? '—'}</td>
                     </tr>
                     <tr>
                       <td className="p-3.5 font-bold text-black">Village / Location</td>
                       <td className="p-3.5 text-ink-muted">{parcel?.village || displayVillage}</td>
-                      <td className="p-3.5 text-black">{parcel?.village_canon || primaryLink.court}</td>
+                      <td className="p-3.5 text-black">{evidence.case_village || '—'}</td>
                       <td className="p-3.5 text-radar-green font-semibold">
                         {evidence.village_match ? 'Village gazetteer match' : 'Village unconfirmed'}
                       </td>
-                      <td className="p-3.5 text-right font-bold">{weights.village ?? 0.1}</td>
+                      <td className="p-3.5 text-right font-bold">{weights.village ?? '—'}</td>
                     </tr>
                     <tr>
                       <td className="p-3.5 font-bold text-black">Party Name Overlap</td>
                       <td className="p-3.5 text-ink-muted">{parcel?.owner?.name || '—'}</td>
                       <td className="p-3.5 text-black">{caseDetail?.parties?.[0]?.name_as_written || caption || '—'}</td>
                       <td className="p-3.5 text-black">{pct(evidence.name_similarity)} token-sort similarity</td>
-                      <td className="p-3.5 text-right font-bold">{weights.name ?? 0.25}</td>
+                      <td className="p-3.5 text-right font-bold">{weights.name ?? '—'}</td>
                     </tr>
                     <tr>
                       <td className="p-3.5 font-bold text-black">Patronymic (Father)</td>
@@ -336,10 +337,10 @@ export const Result: React.FC<ResultProps> = ({
                     </tr>
                     <tr>
                       <td className="p-3.5 font-bold text-black">Case Matter Relevance</td>
-                      <td className="p-3.5 text-ink-muted">Land / revenue holding</td>
+                      <td className="p-3.5 text-ink-muted">{parcel?.area ? `${parcel.area} holding` : '—'}</td>
                       <td className="p-3.5 text-black">{primaryLink.case_type}</td>
                       <td className="p-3.5 font-bold">{String(evidence.case_type_relevance ?? 'scored')}</td>
-                      <td className="p-3.5 text-right font-bold">{weights.case_type ?? 0.1}</td>
+                      <td className="p-3.5 text-right font-bold">{weights.case_type ?? '—'}</td>
                     </tr>
                   </>
                 ) : (
@@ -371,16 +372,31 @@ export const Result: React.FC<ResultProps> = ({
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-black font-bold uppercase">Data Provenance:</span>
               <span className="border-2 border-black px-2 py-0.5 bg-paper-light text-black font-medium">
-                Allahabad High Court Public Records
+                {primaryLink ? 'Allahabad High Court Public Records' : 'No court case matched'}
               </span>
               <span className="border-2 border-black px-2 py-0.5 bg-paper-light text-black font-medium">
-                {parcel?.source_label === 'synthetic' ? 'Synthetic land record (seeded)' : 'State Revenue Land Registry'}
+                {!parcel
+                  ? 'No land record on file'
+                  : parcel.source_label === 'synthetic'
+                    ? 'Synthetic land record (seeded)'
+                    : 'State Revenue Land Registry'}
               </span>
             </div>
             <p className="leading-relaxed">
-              <strong className="text-black">Public Legal Notice:</strong> GREEN means no matching active litigation was found in available records — not that the land is legally safe. This report presents evidence and match confidence, not a title guarantee. Consult a qualified advocate.
+              <strong className="text-black">Public Legal Notice:</strong>{' '}
+              {status === 'RED'
+                ? 'RED means strong evidence links this parcel to an active court case — not a legal adjudication.'
+                : status === 'AMBER'
+                  ? 'AMBER means a possible connection was found and verification is recommended — not a confirmed dispute.'
+                  : 'GREEN means no matching active litigation was found in available records — not that the land is legally safe.'}{' '}
+              This report presents evidence and match confidence, not a title guarantee. Consult a qualified advocate.
             </p>
           </div>
+          {actionError ? (
+            <div className="w-full md:w-auto border-2 border-radar-red bg-[#FDE8E8] px-4 py-3 font-mono text-xs text-black">
+              {actionError}
+            </div>
+          ) : null}
           {parcel?.id ? (
             <div className="flex-shrink-0">
               <button

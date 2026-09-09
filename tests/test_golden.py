@@ -30,7 +30,7 @@ def test_parcel_b_is_red(con):
     row = con.execute("SELECT status, confidence FROM Parcel WHERE id='P-B01'").fetchone()
     assert row, "Parcel B missing"
     assert row[0] == "RED", "Parcel B is " + row[0] + ", expected RED"
-    assert row[1] >= 0.85, "Parcel B confidence %.4f below HIGH band" % row[1]
+    assert row[1] >= 0.85, f"Parcel B confidence {row[1]:.4f} below HIGH band"
 
 
 def test_parcel_a_is_green(con):
@@ -155,5 +155,5 @@ def test_lis_pendens_pattern_is_systemic(con):
         for e in _json.loads(ev or "[]"):
             if e["type"] == "sale" and filed and filed <= e["date"] <= (hi or "9999-12-31"):
                 hits.add(pid)
-    assert len(hits) >= 5, ("only %d RED parcels show a sale during pendency; "
-                            "the pattern must read as systemic" % len(hits))
+    assert len(hits) >= 5, (f"only {len(hits)} RED parcels show a sale during pendency; "
+                            "the pattern must read as systemic")

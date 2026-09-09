@@ -9,9 +9,7 @@ import os
 
 import pandas as pd
 import pyarrow.parquet as pq
-
-from common import (DATA_IN, DATA_MID, DISTRICT, FLAGSHIP_CNR, PROVENANCE,
-                    ContractError, report)
+from common import DATA_IN, DATA_MID, DISTRICT, FLAGSHIP_CNR, PROVENANCE, ContractError, report
 
 CASE_COLS = ["cnr", "case_no", "case_type", "court", "filing_date", "order_date",
              "next_hearing_date", "next_hearing_source", "is_final",
@@ -96,8 +94,9 @@ def run():
         "cases_with_village": int(cases.extracted_village.notna().sum()),
         "cases_with_relation": int(cases.extracted_relation.notna().sum()),
         "filing_span": [str(cases.filing_date.min()), str(cases.filing_date.max())],
-        "max_pendency_years": round(float(
-            (pd.Timestamp("2026-08-21") - pd.to_datetime(cases.filing_date).min()).days / 365.25), 2),
+        "max_pendency_years": round(
+            float((pd.Timestamp("2026-08-21") - pd.to_datetime(cases.filing_date).min()).days
+                  / 365.25), 2),
         "next_hearing_derived": int(cases.next_hearing_date.notna().sum()),
         "next_hearing_real": int((cases.next_hearing_source == "real").sum()),
         "flagship_sale_in_window": sales[0]["date"],

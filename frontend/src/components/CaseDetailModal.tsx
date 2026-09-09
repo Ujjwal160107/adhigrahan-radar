@@ -38,7 +38,9 @@ export const CaseDetailModal: React.FC<CaseDetailModalProps> = ({ caseData, onCl
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs mb-6">
           <div className="border border-black p-3 bg-paper-light">
             <span className="text-ink-muted uppercase block text-[10px]">Status</span>
-            <span className="font-bold text-sm text-radar-red uppercase">{caseData.status}</span>
+            <span className={`font-bold text-sm uppercase ${
+              caseData.status === 'active' ? 'text-radar-red' : 'text-radar-green'
+            }`}>{caseData.status}</span>
           </div>
           <div className="border border-black p-3 bg-paper-light">
             <span className="text-ink-muted uppercase block text-[10px]">Filing Date</span>
@@ -102,7 +104,7 @@ export const CaseDetailModal: React.FC<CaseDetailModalProps> = ({ caseData, onCl
 
         {/* Provenance Footer */}
         <div className="border-t border-black/20 pt-4 flex items-center justify-between text-xs font-mono text-ink-muted">
-          <span>Source: Allahabad High Court Judgments Corpus ({caseData.source_label})</span>
+          <span>Source: {caseData.court || 'Court records'} ({caseData.source_label})</span>
           <button
             onClick={onClose}
             className="bg-black text-white px-4 py-2 hover:bg-neutral-800 transition-colors cursor-pointer"

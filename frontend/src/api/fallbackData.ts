@@ -34,6 +34,7 @@ export const FLAGSHIP_RED_PARCEL: ParcelDetail = {
   note: "High-confidence litigation connection found",
   closed_history: false,
   source_label: "synthetic",
+  projects: [],
 };
 
 export const FLAGSHIP_RED_LITIGATION: LitigationResponse = {
@@ -94,6 +95,7 @@ export const FLAGSHIP_GREEN_PARCEL: ParcelDetail = {
   note: "No matching active litigation found in available records",
   closed_history: false,
   source_label: "synthetic",
+  projects: [],
 };
 
 export const FLAGSHIP_GREEN_LITIGATION: LitigationResponse = {
@@ -123,6 +125,7 @@ export const FLAGSHIP_AMBER_PARCEL: ParcelDetail = {
   note: "Possible connection - verification recommended; closed litigation history on record",
   closed_history: true,
   source_label: "synthetic",
+  projects: [],
 };
 
 export const FLAGSHIP_AMBER_LITIGATION: LitigationResponse = {
@@ -186,6 +189,7 @@ export const FLAGSHIP_CASE_DETAIL: CaseDetail = {
     { event_type: "next_hearing", date: "2026-10-29", note: "Next hearing" },
   ],
   linked_parcels: [{ parcel_id: "P-B01", confidence_score: 0.9105, status: "RED" }],
+  affected_projects: [],
 };
 
 export const AMBER_CASE_DETAIL: CaseDetail = {
@@ -209,6 +213,7 @@ export const AMBER_CASE_DETAIL: CaseDetail = {
     { event_type: "judgment", date: "2024-07-16", note: "Latest order on record" },
   ],
   linked_parcels: [{ parcel_id: "P-046", confidence_score: 1.0, status: "AMBER" }],
+  affected_projects: [],
 };
 
 export const FALLBACK_OVERVIEW: DashboardOverview = {

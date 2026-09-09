@@ -1,6 +1,6 @@
 import pytest
 
-from backend.normalize import norm_survey, norm_place
+from backend.normalize import norm_place, norm_survey
 
 
 def test_norm_survey_bridges_the_flagship_divergence():
@@ -21,7 +21,8 @@ def test_norm_place_lowercases_and_strips():
 def test_parity_with_pipeline_s2():
     """Guard against drift: import the pipeline originals and compare."""
     pytest.importorskip("rapidfuzz")
-    import importlib.util, sys
+    import importlib.util
+    import sys
     from pathlib import Path
     pipe = Path(__file__).resolve().parents[2] / "pipeline"
     sys.path.insert(0, str(pipe))

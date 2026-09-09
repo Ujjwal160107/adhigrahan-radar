@@ -29,9 +29,9 @@ export const AppFooter: React.FC<AppFooterProps> = ({
   return (
     <footer className="w-full flex flex-wrap items-center justify-between border-t border-black/20 pt-6 mt-12 text-xs font-mono text-ink-muted max-w-6xl mx-auto">
       <div className="flex items-center gap-6">
-        <span>Section 52 TPA Lis Pendens Resolver</span>
+        <span>Adhigrahan Radar — Land Acquisition Delay Prediction</span>
         <span className="hidden md:inline text-black/30">•</span>
-        <span className="hidden md:inline">eCourts × Bhoomi Cadastral Linkage</span>
+        <span className="hidden md:inline">Court ↔ parcel litigation linkage</span>
       </div>
       <div className="flex items-center gap-6 mt-3 sm:mt-0">
         {link('dashboard', 'Officer Heatmap', onOpenDashboard)}

@@ -7,6 +7,15 @@ import {
   VillageDensity,
   WatchlistItem,
   ParcelMapResponse,
+  ProjectListResponse,
+  ProjectDetail,
+  ProjectRiskResponse,
+  ProjectParcelsResponse,
+  InterventionsResponse,
+  Intervention,
+  DashboardRisk,
+  ModelHistoryResponse,
+  AuthSession,
 } from '../types/api';
 
 import {
@@ -139,30 +148,110 @@ export const api = {
         {
           id: 1,
           parcel_id: 'P-B01',
+          project_id: null,
           survey_no: '1365-1',
           village: 'Madanpur Panyar',
+          project_name: null,
           subscribed_at: '2026-08-20',
-          has_update: true,
+          has_update: false,
         },
       ],
     });
   },
 
-  async subscribeWatchlist(parcelId: string): Promise<{ id: number; parcel_id: string; subscribed_at: string }> {
-    try {
-      const res = await fetch(`${BASE_URL}/watchlist`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ parcel_id: parcelId }),
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn('Watchlist subscribe failed, falling back to mock response', e);
+  async subscribeWatchlist(
+    target: { parcelId: string } | { projectId: string },
+  ): Promise<{ id: number; parcel_id: string | null; project_id: string | null; subscribed_at: string }> {
+    const body = 'parcelId' in target
+      ? { parcel_id: target.parcelId }
+      : { project_id: target.projectId };
+    const res = await fetch(`${BASE_URL}/watchlist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      if (errBody?.error === 'already_subscribed') {
+        throw new Error('Already on your watchlist.');
+      }
+      throw new Error(errBody?.error === 'unknown_parcel' || errBody?.error === 'unknown_project'
+        ? 'That record is not in the index.'
+        : `Could not subscribe (server returned ${res.status}).`);
     }
-    return {
-      id: Math.floor(Math.random() * 1000) + 10,
-      parcel_id: parcelId,
-      subscribed_at: new Date().toISOString().split('T')[0],
-    };
+    return res.json();
+  },
+
+  async searchProjects(params: {
+    district?: string; stage?: string; riskBand?: string; act?: string;
+    status?: string; sort?: string; limit?: number; offset?: number;
+  } = {}): Promise<ProjectListResponse> {
+    const q = new URLSearchParams();
+    if (params.district) q.append('district', params.district);
+    if (params.stage) q.append('stage', params.stage);
+    if (params.riskBand) q.append('risk_band', params.riskBand);
+    if (params.act) q.append('act', params.act);
+    if (params.status) q.append('status', params.status);
+    if (params.sort) q.append('sort', params.sort);
+    q.append('limit', String(params.limit ?? 50));
+    q.append('offset', String(params.offset ?? 0));
+    return fetchJson<ProjectListResponse>(`/projects?${q.toString()}`, { total: 0, projects: [] });
+  },
+
+  async getProject(id: string): Promise<ProjectDetail> {
+    return fetchJson<ProjectDetail>(`/projects/${id}`);
+  },
+
+  async getProjectRisk(id: string): Promise<ProjectRiskResponse> {
+    return fetchJson<ProjectRiskResponse>(`/projects/${id}/risk`, { project_id: id, stages: [] });
+  },
+
+  async getProjectParcels(id: string): Promise<ProjectParcelsResponse> {
+    return fetchJson<ProjectParcelsResponse>(
+      `/projects/${id}/parcels`, { project_id: id, parcels: [] });
+  },
+
+  async getInterventions(id: string): Promise<InterventionsResponse> {
+    return fetchJson<InterventionsResponse>(
+      `/projects/${id}/interventions`, { project_id: id, interventions: [] });
+  },
+
+  async createIntervention(
+    projectId: string,
+    body: { stage?: string; ruleId?: string; action: string; note?: string },
+  ): Promise<Intervention> {
+    const res = await fetch(`${BASE_URL}/projects/${projectId}/interventions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        stage: body.stage, rule_id: body.ruleId, action: body.action, note: body.note,
+      }),
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody?.error === 'forbidden'
+        ? 'Your role cannot record interventions.'
+        : `Could not record the intervention (server returned ${res.status}).`);
+    }
+    return res.json();
+  },
+
+  async getDashboardRisk(): Promise<DashboardRisk> {
+    return fetchJson<DashboardRisk>('/dashboard/risk', {
+      model_version: null, trained_at: null,
+      bands: { HIGH: 0, MEDIUM: 0, LOW: 0 },
+      deadlines: { d30: 0, d60: 0, d90: 0 },
+      median_lead_time_days: null, districts: [], top_at_risk: [],
+    });
+  },
+
+  async getModelHistory(): Promise<ModelHistoryResponse> {
+    return fetchJson<ModelHistoryResponse>('/models/history', { runs: [] });
+  },
+
+  async getSession(): Promise<AuthSession> {
+    return fetchJson<AuthSession>('/auth/session', {
+      role: 'officer', can_write: true, known_roles: ['officer'], auth_mode: 'demo_role_header',
+    });
   },
 };

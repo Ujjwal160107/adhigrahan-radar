@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface ProcessingProps {
   surveyNo: string;
@@ -7,107 +7,49 @@ interface ProcessingProps {
   onComplete: () => void;
 }
 
-interface StepConfig {
-  label: string;
-  startPercent: number;
-  endPercent: number;
-  delayMs: number;
-}
-
-const STEP_SEQUENCE: StepConfig[] = [
-  { label: "finding parcel", startPercent: 14, endPercent: 27, delayMs: 800 },
-  { label: "extracting court references", startPercent: 35, endPercent: 42, delayMs: 1400 },
-  { label: "resolving entities", startPercent: 54, endPercent: 62, delayMs: 900 },
-  { label: "checking linked cases", startPercent: 72, endPercent: 85, delayMs: 1600 },
-  { label: "scoring evidence", startPercent: 94, endPercent: 100, delayMs: 600 },
-];
+// The search itself is a real API round-trip (typically well under a second
+// against the local SQLite build). This screen used to fake ~5s of scripted
+// "steps" for work that had already run offline at build time - that was
+// theatre, not progress. It now shows a plain spinner for exactly as long as
+// the real request takes, with a short minimum so a fast response does not
+// flash unreadably.
+const MIN_VISIBLE_MS = 300;
 
 export const Processing: React.FC<ProcessingProps> = ({ surveyNo, village, ready, onComplete }) => {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [currentPercent, setCurrentPercent] = useState(14);
-  const [animationDone, setAnimationDone] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const firedRef = useRef(false);
 
   useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>;
-    let subTickId: ReturnType<typeof setTimeout>;
-    let cancelled = false;
-
-    const runStep = (index: number) => {
-      if (cancelled) return;
-      if (index >= STEP_SEQUENCE.length) {
-        setAnimationDone(true);
-        return;
-      }
-
-      const step = STEP_SEQUENCE[index];
-      setCurrentStepIndex(index);
-      setCurrentPercent(step.startPercent);
-
-      subTickId = setTimeout(() => {
-        if (!cancelled) setCurrentPercent(step.endPercent);
-      }, Math.max(step.delayMs * 0.45, 250));
-
-      timeoutId = setTimeout(() => {
-        runStep(index + 1);
-      }, step.delayMs);
-    };
-
-    runStep(0);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-      clearTimeout(subTickId);
-    };
+    const t = setTimeout(() => setMinTimeElapsed(true), MIN_VISIBLE_MS);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
-    if (!animationDone || !ready) return;
-    const hold = setTimeout(onComplete, 400);
-    return () => clearTimeout(hold);
-  }, [animationDone, ready, onComplete]);
-
-  const currentStep = STEP_SEQUENCE[currentStepIndex] || STEP_SEQUENCE[0];
-  const previousStep = currentStepIndex > 0 ? STEP_SEQUENCE[currentStepIndex - 1] : null;
-  const holding = animationDone && !ready;
+    if (ready && minTimeElapsed && !firedRef.current) {
+      firedRef.current = true;
+      onComplete();
+    }
+  }, [ready, minTimeElapsed, onComplete]);
 
   return (
     <div className="w-full px-8 sm:px-16 md:px-20 pt-16 sm:pt-24 max-w-6xl mx-auto flex flex-col items-start">
-      <div className="w-full">
-        <div className="min-h-[40px] flex items-end">
-          {previousStep ? (
-            <span className="font-serif italic text-neutral-400 text-2xl sm:text-3xl font-normal tracking-wide transition-opacity duration-300">
-              {previousStep.label}.. done
-            </span>
-          ) : (
-            <span className="opacity-0 font-serif italic text-2xl sm:text-3xl">placeholder</span>
-          )}
-        </div>
-
-        <h2 className="font-serif italic font-bold text-4xl sm:text-5xl md:text-6xl text-black tracking-tight mt-1 mb-8">
-          {holding ? 'waiting on the index' : currentStep.label}
-        </h2>
-
-        <div className="w-full border-2 border-black bg-white h-14 sm:h-16 relative flex items-center shadow-none">
-          <div
-            className="bg-black h-full flex items-center pl-5 transition-all duration-300 ease-out overflow-hidden"
-            style={{ width: `${holding ? 100 : currentPercent}%` }}
-          >
-            <span className="font-mono text-sm sm:text-base text-white tracking-widest whitespace-nowrap select-none font-medium">
-              {holding ? 'index still answering...' : `${currentPercent}% done...`}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between text-xs sm:text-sm font-mono text-ink-muted">
-          <span>
-            {holding
-              ? 'Animation complete — holding until court and land records return.'
-              : `Cross-referencing ${surveyNo || 'survey'} · ${village || 'Sultanpur'} against court orders...`}
-          </span>
-          <span>STAGE {Math.min(currentStepIndex + 1, 5)} OF 5</span>
-        </div>
+      <div className="flex items-center gap-4 mb-6">
+        <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+        <h1 className="font-serif italic font-bold text-2xl sm:text-3xl text-black tracking-tight select-none">
+          Querying the parcel index…
+        </h1>
       </div>
+      <p className="font-mono text-sm text-ink-muted max-w-2xl">
+        Looking up{' '}
+        <span className="text-black font-medium">{surveyNo || 'any survey number'}</span>
+        {village ? (
+          <>
+            {' '}in <span className="text-black font-medium">{village}</span>
+          </>
+        ) : null}
+        . Matching, scoring and evidence linkage already ran during the offline build -
+        this request is a single database read.
+      </p>
     </div>
   );
 };

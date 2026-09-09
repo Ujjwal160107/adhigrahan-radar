@@ -107,7 +107,7 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({
 
       <div className="border-2 border-black bg-white mb-8 font-mono text-xs sm:text-sm">
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 divide-y sm:divide-y-0 sm:divide-x divide-black">
-          <Stat label="District" value={overview?.district || 'Sultanpur'} />
+          <Stat label="District" value={overview?.district || '—'} />
           <Stat label="Parcels" value={overview?.parcels ?? '—'} />
           <Stat label="Cases" value={overview?.cases ?? '—'} />
           <Stat label="RED" value={counts?.RED ?? '—'} tone="red" />
@@ -127,7 +127,7 @@ export const OfficerDashboard: React.FC<OfficerDashboardProps> = ({
       <div className="border-2 border-black bg-white mb-8 overflow-hidden">
         <div className="p-4 sm:p-5 border-b-2 border-black flex items-baseline justify-between gap-4">
           <h2 className="font-mono text-sm font-bold uppercase tracking-wider">
-            Sultanpur litigation heatmap
+            {overview?.district ? `${overview.district} litigation heatmap` : 'Litigation heatmap'}
           </h2>
           <span className="font-mono text-[10px] sm:text-xs text-ink-muted">
             density = (2·RED + AMBER) / (2·parcels)

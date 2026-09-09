@@ -57,6 +57,24 @@ Status colors are reserved strictly for functional evidence bands:
 | **AMBER** (Caution / Disposed) | `#FEF3C7` | `#D97706` | `#D97706` / `#000000` | Medium-confidence match, disposed court case, or unconfirmed location. |
 | **GREEN** (Clear / No Match) | `#DCFCE7` | `#16A34A` | `#16A34A` / `#000000` | Zero active dispute links found in indexed court records. |
 
+### Risk Tokens (Predicted Delay Risk — `RiskBadge`)
+
+A **second, deliberately separate scale** for `RiskBadge` (project/stage delay-risk
+predictions), reusing the identical RED/AMBER/GREEN hex values above so the palette stays
+one system, but never sharing a label or a component with the litigation status badge:
+
+| Band | Background | Border / Text | Usage Condition | Mandatory Disclaimer |
+| :--- | :--- | :--- | :--- | :--- |
+| **HIGH** | `#FDE8E8` | `#DC2626` | `delay_probability >= high` threshold for that stage's shipped model | "Predicted risk of missing a statutory deadline. Not an administrative finding." |
+| **MEDIUM** | `#FEF3C7` | `#D97706` | Between the medium and high thresholds | same |
+| **LOW** | `#DCFCE7` | `#16A34A` | Below the medium threshold | same |
+| *(unscored)* | none, `border-black/30` | `text-ink-muted` | Stage has no `ProjectRisk` row (closed stage, or model didn't ship a HIGH band for it) | "Not yet scored" |
+
+The disclaimer is baked into every `RiskBadge` instance (`title` attribute) and must never be
+dropped when reusing the component. `ClockSourceBadge` is the companion token: a small
+`statute` / `administrative_target` pill next to any statutory deadline, so a viewer can never
+mistake a 90-day internal target for a legal deadline.
+
 ---
 
 ## 4. Background & 100px Grid Utility
@@ -186,18 +204,30 @@ When rendering data, AI agents must adhere to the following logic rules:
 ```
 frontend/src/
 ├── api/
-│   ├── client.ts             # Typed API client with 3-tier fallback
-│   └── fallbackData.ts       # Tier-3 offline JSON payloads (P-B01, P-A01, P-C01)
+│   ├── client.ts               # Typed API client: live fetch, 3-tier fallback, demo mode
+│   └── fallbackData.ts         # Tier-3 offline JSON payloads (flagship RED/AMBER/GREEN parcels + cases)
 ├── components/
-│   ├── CaseDetailModal.tsx   # Full court case dossier modal
-│   └── Header.tsx            # Editorial branding header
+│   ├── CaseDetailModal.tsx     # Full court case dossier modal
+│   ├── Header.tsx              # Editorial branding header + role-aware nav
+│   ├── AppFooter.tsx           # Reliability tier indicator
+│   ├── ParcelMap.tsx           # Officer heatmap / risk-map GeoJSON view
+│   ├── RiskBadge.tsx           # LOW/MEDIUM/HIGH delay-risk token (§3 Risk Tokens)
+│   └── ClockSourceBadge.tsx    # statute / administrative_target pill
 ├── pages/
-│   ├── Search.tsx            # Split search box homepage
-│   ├── Processing.tsx        # Top-half 5-step progress screen
-│   └── Result.tsx            # Investigation dossier & lis pendens timeline
+│   ├── Search.tsx              # Split search box, linkage lookup entry point
+│   ├── Processing.tsx          # Real-request spinner (not scripted animation)
+│   ├── ParcelPicker.tsx        # Disambiguation when a search matches >1 parcel
+│   ├── Result.tsx              # Investigation dossier & lis pendens timeline
+│   ├── LookupApp.tsx           # Search/Processing/ParcelPicker/Result view coordinator
+│   ├── OfficerDashboard.tsx    # Legacy single-district officer view (heatmap + watchlist)
+│   ├── RiskDashboard.tsx       # Home: risk-band rollups, district heatmap, watchlist
+│   ├── ProjectPortfolio.tsx    # Filterable/paginated project list ranked by delay probability
+│   ├── ProjectDetail.tsx       # Stage timeline, drivers, recommendations, intervention form
+│   ├── ModelHistory.tsx        # Model registry: shipped algo + baselines per stage
+│   └── Watchlist.tsx           # Subscribed parcels and projects
 ├── types/
-│   └── api.ts                # TypeScript interfaces for DB models
-├── App.tsx                   # Main screen coordinator
-├── index.css                 # 100px grid & base typography
+│   └── api.ts                  # TypeScript interfaces for every backend response shape
+├── App.tsx                     # react-router-dom route table
+├── index.css                   # 100px grid & base typography
 └── main.tsx
 ```

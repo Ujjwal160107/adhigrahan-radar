@@ -20,7 +20,7 @@ from common import DB, FALLBACK, FLAGSHIP_CNR, report
 def _rows(con, sql, args=()):
     cur = con.execute(sql, args)
     cols = [d[0] for d in cur.description]
-    return [dict(zip(cols, r)) for r in cur.fetchall()]
+    return [dict(zip(cols, r, strict=True)) for r in cur.fetchall()]
 
 
 def _write(name, payload):
@@ -112,11 +112,16 @@ def run():
     # GET /dashboard/overview
     counts = {s: sum(1 for p in parcels if p["status"] == s)
               for s in ("RED", "AMBER", "GREEN")}
+    first_district = None
+    if parcels:
+        row = _rows(con, "SELECT district FROM Parcel WHERE id=?", (parcels[0]["id"],))
+        first_district = row[0]["district"] if row else None
     overview = {
-        "district": "Sultanpur",
+        "district": first_district,
         "parcels": len(parcels), "cases": len(cases),
         "status_counts": counts,
-        "active_cases": _rows(con, "SELECT COUNT(*) n FROM CourtCase WHERE status='active'")[0]["n"],
+        "active_cases": _rows(
+            con, "SELECT COUNT(*) n FROM CourtCase WHERE status='active'")[0]["n"],
         "high_confidence_links": _rows(con, "SELECT COUNT(*) n FROM ParcelCaseLink "
                                             "WHERE confidence_band='HIGH'")[0]["n"],
         "possible_matches": _rows(con, "SELECT COUNT(*) n FROM ParcelCaseLink "

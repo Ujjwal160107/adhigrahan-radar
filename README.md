@@ -12,19 +12,20 @@ of Land Acquisition Delays* · Ministry of Rural Development, Dept. of Land Reso
 
 Land acquisition is legally time-boxed, and the boxes are the point:
 
-| Transition | Deadline | Consequence of breach |
-|---|---|---|
-| §3A → §3D (NH Act 1956) | 365 days | 3A notification **lapses**, s.3D(3) |
-| §11 → §19 (RFCTLARR 2013) | 365 days | Preliminary notification lapses, s.19(7) |
-| §19 → §23 award | 365 days | Acquisition proceedings lapse, s.25 |
+| Transition | Deadline | Clock | Consequence of breach |
+|---|---|---|---|
+| §3A → §3D (NH Act 1956) / §11 → §19 (RFCTLARR 2013) | 365 days | statute | Notification **lapses**, s.3D(3) / s.19(7) |
+| §19 → §23 award | 365 days | statute | Acquisition proceedings lapse, s.25 |
+| Award → compensation disbursed | 90 days | administrative target | none statutory |
+| Award → possession | 90 days | administrative target | none statutory |
 
 Missing the clock **voids the acquisition**. The state re-notifies, re-values the land at a
 higher rate, and pays more compensation for the same parcels. Meanwhile the affected families
 have already lost planning certainty over land that is neither theirs to use nor paid for.
 
 India monitors this **retrospectively** — a monthly return telling an officer that a project
-already crossed 300 days, when nothing can be done. Nothing flags a project *before* the
-clock runs out.
+already crossed 300 days, when nothing can be done. This system flags a project *before* the
+clock runs out, per stage, with the specific factors driving the risk.
 
 ## The idea
 
@@ -37,70 +38,83 @@ acquired**. Court records are indexed by **party name**, land records by **surve
 The two systems never agreed on a key, so nobody can currently answer *"how many parcels in
 this corridor are under active dispute?"*
 
-**This repo can.** It contains a working court↔parcel record-linkage engine, and the delay
-model consumes it as a feature source:
+**This repo answers it.** A court↔parcel record-linkage engine feeds a per-stage delay model
+as one of four feature families:
 
 ```
-Vivaad Radar  (built, s0-s7)          ->   feature provider
-court <-> parcel linkage                   share_parcels_red, n_active_cases,
-                                           has_interim_order, max_pendency_days
-                                                        |
-                                                        v
-                              Adhigrahan Radar  (designed, s8-s15)
-                              per-stage delay model + drivers + retrieved actions
+Vivaad Radar  (linkage engine, s0-s7)      ->   feature provider
+court <-> parcel linkage                        share_parcels_red, n_active_cases,
+                                                has_interim_order, max_pendency_days
+                                                             |
+                                                             v
+                                   Adhigrahan Radar  (risk engine, s8-s15)
+                                   per-stage delay model + drivers + retrieved actions
 ```
 
 The linkage engine earns its matches. Where the court writes survey `1365/1` in village
 *Madanpur Paniyar* and the land record writes `1365-1` in *Madanpur Panyar*, the pipeline
 reconciles both through survey normalisation, a village gazetteer and fuzzy name matching,
-and scores the link at **0.9105**.
+and scores the link at **0.9105**. The risk engine reuses the same normaliser and gazetteer to
+bind acquisition projects to parcels — no second matcher.
 
 ---
 
 ## Status
 
+Both halves are built end to end: offline pipeline, SQLite store, FastAPI backend, React
+frontend.
+
 | Component | State |
 |---|---|
-| Linkage engine `s0`–`s7` | **Built.** 38 real High Court cases, 135 parcels, 84 links, 47 tests green |
-| Risk engine `s8`–`s15` | **Designed, not implemented.** See [`docs/specs/`](docs/specs) |
-| Backend — 8 linkage endpoints | **Built** |
-| Backend — 6 risk endpoints | Designed |
-| Frontend — search, result, officer dashboard, watchlist | **Built** |
-| Frontend — risk dashboard, project portfolio, project detail | Designed |
+| Linkage engine `s0`–`s7` | **Built.** 38 real High Court cases, 135 parcels, 84 links |
+| Risk engine `s8`–`s15` | **Built.** 96 projects / 385 stage-rows across 8 UP districts, 5 calibrated per-stage models, 48 open stages scored |
+| Backend — 9 linkage/litigation endpoints | **Built** |
+| Backend — 10 risk/project/model/auth endpoints | **Built** |
+| Frontend — risk dashboard, project portfolio, project detail, model registry | **Built** |
+| Frontend — litigation search, result, officer heatmap, watchlist | **Built** (demoted to `/lookup/*`, the evidence drill-down layer) |
+| Tests | **130** (108 backend/pipeline + 22 frontend), all green |
 
-Current build, from `s1_report.json` / `s5_report.json`:
+Current build:
 
 | | |
 |---|---|
-| District | Sultanpur, Uttar Pradesh |
+| Linkage district | Sultanpur, Uttar Pradesh (the only district with a real litigation corpus) |
 | Cases / parcels | 38 real cases (8 active) / 135 synthetic parcels, 22 villages |
 | Links surfaced | 84 (43 HIGH, 41 MEDIUM) from 1,678 scored pairs |
 | Parcel status | 12 RED · 62 AMBER · 61 GREEN |
-| Flagship | `P-B01` = RED @ 0.9105 · `P-A01` = GREEN |
-| Longest pendency in corpus | **~2.6 years** (not the PRD's illustrative "6 years") |
-| Tests | 47, all green |
+| Flagship parcel | `P-B01` = RED @ 0.9105 · `P-A01` = GREEN |
+| Longest litigation pendency | **~2.6 years** |
+| Acquisition districts | 8 (Sultanpur, Amethi, Pratapgarh, Raebareli, Ayodhya, Barabanki, Gonda, Basti) — **synthetic**, see [Honesty rules](#honesty-rules) |
+| Acquisition projects / stage-rows | 96 / 385 (337 closed, 48 open) |
+| Flagship project | `PRJ-SUL-001` — HIGH risk, 56.97% delay probability, bound to `P-B01` |
+| Risk bands on open stages | 27 HIGH · 14 MEDIUM · 7 LOW |
+| Median lead time (open stages) | 52 days |
+| Models shipped | logistic_regression (4 of 5 stages) · base_rate (`possession` — the naive prior beat both learned models on this corpus; HIGH suppressed for that stage) |
+| Tests | 130, all green |
 
 ---
 
 ## Quickstart
 
 ```bash
+make doctor    # verify Python 3.11-3.13 and Node >=20 before installing anything
 make setup     # python venv + pip install + npm install
-make build     # regenerate data/output from the committed contract
-make test      # 47 tests
+make build     # regenerate data/output from the committed contract (s0-s15)
+make test      # 108 backend/pipeline tests + 22 frontend tests
 make api       # http://localhost:8000
 make web       # http://localhost:5173   (separate terminal)
 ```
 
-Without `make`:
+Without `make` (works on both POSIX and Windows; substitute `.venv/Scripts/` for `.venv/bin/`
+on Windows):
 
 ```bash
 python -m venv .venv
-.venv/Scripts/pip install -r requirements.txt      # POSIX: .venv/bin/pip
-.venv/Scripts/python pipeline/run_all.py --skip-handoff
-.venv/Scripts/python -m pytest
-.venv/Scripts/uvicorn backend.main:app --reload --port 8000
-cd frontend && npm install && npm run dev
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python pipeline/run_all.py --skip-handoff
+.venv/bin/python -m pytest
+.venv/bin/uvicorn backend.main:app --reload --port 8000
+cd frontend && npm install && npm test && npm run dev
 ```
 
 ### Why `--skip-handoff` is the default
@@ -109,9 +123,24 @@ cd frontend && npm install && npm run dev
 **not part of this repo**. `data/input/cases.parquet` and `data/input/parcels.parquet` are
 the committed data contract, and every stage downstream of them is fully reproducible. `make
 build` therefore starts at `s1`. Use `make build-all` only if you have the external corpus.
+`s8` onward (the risk engine) has no external dependency and always runs.
+
+`python pipeline/run_all.py --risk-only` reruns only `s8`–`s15` against an existing
+`vivaad.db`, for iterating on the risk engine without rebuilding the linkage side.
 
 `data/output/` is **not committed** — it is a build artifact. CI runs `make build` on every
 push precisely so a broken build cannot reach a fresh clone silently.
+
+### Environment variables
+
+See [`.env.example`](.env.example). Nothing here is a secret.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `VIVAAD_DB` | `data/output/vivaad.db` | SQLite build artifact the API reads |
+| `VITE_API_URL` | `http://localhost:8000` | Frontend → API base URL |
+| `CORS_ORIGINS` | the two localhost dev origins | Comma-separated CORS allowlist |
+| `VIVAAD_FALLBACK_DIR` | `data/output/fallback` | Tier-2 fallback cache location |
 
 ---
 
@@ -120,26 +149,30 @@ push precisely so a broken build cannot reach a fresh clone silently.
 ```
 adhigrahan-radar/
 ├── backend/           FastAPI, read-only over the SQLite build artifact
-│   ├── routers/       parcels · cases · dashboard · watchlist
-│   ├── fallback.py    serves cached JSON at the same URLs when the DB is gone
-│   └── tests/         34 API tests
-├── frontend/          React (Vite) + Tailwind + Leaflet
-│   └── src/pages/     Search · Processing · Result · OfficerDashboard · Watchlist
-├── pipeline/          the offline build, one file per stage
-│   ├── s0..s7         linkage engine (built)
-│   ├── s8..s15        risk engine (designed)
-│   └── README.md      what each stage does, and every deliberate deviation
+│   ├── auth.py         demo-grade X-Role gate + AuditLog writer
+│   ├── routers/        parcels · cases · dashboard · watchlist · projects · models · auth
+│   ├── fallback.py     serves cached JSON at the same URLs when the DB is gone
+│   └── tests/          40 API tests
+├── frontend/           React (Vite) + Tailwind + Leaflet + react-router-dom
+│   └── src/pages/       RiskDashboard · ProjectPortfolio · ProjectDetail · ModelHistory ·
+│                        LookupApp (Search · Processing · Result · OfficerDashboard · Watchlist)
+├── pipeline/           the offline build, one file per stage
+│   ├── s0..s7          linkage engine (built)
+│   ├── s8..s15         risk engine (built)
+│   ├── recommendations.py  static driver -> action rule table
+│   └── README.md       what each stage does, and every deliberate deviation
 ├── data/
-│   ├── input/         the data contract - committed
-│   ├── raw/           cached source snapshots - the demo never hits the network
-│   └── output/        build artifacts - gitignored, except trained models
-├── tests/             pipeline golden suite (13 tests)
+│   ├── input/          cases/parcels.parquet committed (data contract);
+│   │                   acquisitions/project_stages/features.parquet regenerated every build
+│   ├── raw/             cached source snapshots - the demo never hits the network
+│   └── output/          build artifacts - gitignored, except trained models
+├── tests/               pipeline golden suite (44 tests: linkage + acquisition + features + model + risk)
 └── docs/
-    ├── architecture/  system architecture, design system, excalidraw + generator
-    ├── specs/         approved designs
-    ├── plans/         executed implementation plans
-    ├── product/       PRD and SIH submission content
-    └── research/      source discovery and verified data sources
+    ├── architecture/    system architecture, design system, excalidraw + generator
+    ├── plans/           implementation plans, including this build's blueprint
+    ├── specs/           approved designs
+    ├── product/         PRD and SIH submission content
+    └── research/        source discovery and verified data sources
 ```
 
 **Dependency direction is one-way and never reversed:**
@@ -171,8 +204,11 @@ the same URLs.
 | Tier | Mechanism | Trigger |
 |---|---|---|
 | 1 — live | frontend → FastAPI → SQLite | normal |
-| 2 — cached | `fallback.py` serves exported JSON at the same URLs | DB missing or query failure |
-| 3 — bundled | flagship payloads compiled into `api/client.ts` | `?demo=1` or a failed fetch |
+| 2 — cached | `fallback.py` serves exported JSON at the same URLs (`s7`/`s15` write it) | DB missing or query failure |
+| 3 — bundled | flagship litigation payloads compiled into `api/client.ts` | `?demo=1` or a failed fetch |
+
+Tier 3 currently covers the litigation-lookup flagship payloads only; the risk-engine
+endpoints rely on tiers 1 and 2 (both fully implemented and tested against the real build).
 
 ---
 
@@ -183,17 +219,27 @@ technical reviewer is an unlabelled fabricated number.
 
 1. **Provenance on every row.** `real` · `synthetic` · `mocked` · `derived` ·
    `model_generated` · `cached`.
-2. **Synthetic data may train a model; only real data may score it.** No synthetic row
-   contributes to any reported metric.
+2. **Synthetic data may train a model; only real data may score it.** No real acquisition
+   dataset was available in this environment (`data/raw/bhoomirashi/` is an empty
+   placeholder), so `n_test_real = 0` for every stage, always — and every `ModelRun` row says
+   so in `notes`. The mechanism (per-stage calibration, holdout, threshold selection,
+   baseline comparison) is genuine; the reported metrics are a diagnostic of that mechanism,
+   not a validated real-world performance claim. The model registry (`/models` in the app)
+   states this prominently, not in fine print.
 3. **Statutory clocks are labelled.** Three of five stage deadlines come from law; two are
-   administrative targets we chose. Every row carries `clock_source` and every screen renders
-   the distinction.
+   administrative targets we chose. Every `ProjectStage` row carries `clock_source` and every
+   screen renders the distinction via the `ClockSourceBadge` component.
 4. **Open stages are right-censored** (`is_delayed = NULL`), never scored as on-time.
 5. **Derived court dates say so.** No case in the corpus carries a real next-hearing date, so
    the pipeline derives one for active cases only and stamps `next_hearing_source='derived'`.
 6. **Precision-first bands.** RED requires a HIGH-confidence identifier match on an active
    case. HIGH delay risk is emitted only if it clears ≥ 0.70 precision on held-out data —
-   otherwise the band is suppressed entirely.
+   otherwise the band is suppressed entirely. It is currently suppressed for the `possession`
+   stage, where `base_rate` beat both learned models on this corpus.
+7. **No hardcoded demo data in the frontend.** Every dashboard number, chart, table row and
+   badge is read from the database through the API. Where a value cannot be computed
+   (e.g. a district with no litigation corpus), the UI says so explicitly rather than
+   substituting a default.
 
 ---
 
@@ -204,21 +250,29 @@ probability of delay *at different stages*.
 
 ```
 HistGradientBoostingClassifier(max_depth=3, max_leaf_nodes=8, l2_regularization=1.0)
-  -> CalibratedClassifierCV(isotonic if n>=200 else sigmoid)
+  -> CalibratedClassifierCV(isotonic if n_train>=200 else sigmoid)     [always sigmoid on this corpus]
+  -> compared against base_rate and logistic_regression on the same holdout (Brier score)
+  -> whichever wins ships; base_rate winning is reported, not hidden
   -> thresholds chosen on the holdout: t_high at precision >= 0.70, t_med at recall >= 0.80
-  -> SHAP TreeExplainer, top-5 signed drivers, persisted at build time
-  -> driver -> action rule table (retrieved, never generated)
+  -> SHAP Explainer wraps the shipped model's predict_proba directly (works for any of the
+     three algo types, not just tree models) - top-5 signed drivers, persisted at build time
+  -> driver -> action rule table (pipeline/recommendations.py, retrieved, never generated)
 ```
 
 20 features per `(project, stage)` row in four families: **litigation** (9, the
-differentiator), project intrinsics (5), administrative (4), district context (3, computed on
-the training split only). Every feature is computed as of stage entry, and a build-time
-leakage audit raises if any contributing row post-dates it.
+differentiator — `share_parcels_red`, `has_interim_order`, `n_active_cases`,
+`litigation_coverage`, …), project intrinsics (4), administrative (4), district context (3,
+computed on the training split only, using a shared `cutoff_date` written by `s11` and reused
+by `s12`). Every feature carries a leakage-safe observation point: open stages observe at the
+real build "now"; closed (training) stages observe at a point strictly before their own
+completion, so no feature can smuggle in the outcome it is meant to predict. A dedicated test
+suite (`tests/test_features.py`) enforces this mechanically.
 
-Reported against a **base-rate** and a **logistic-regression** baseline on ROC-AUC, PR-AUC and
-Brier score. *If the LR baseline wins on the holdout, the LR ships and the slide says so.*
+On this corpus, `logistic_regression` won 4 of 5 stages and `base_rate` won the fifth
+(`possession`) — reported plainly per rule 2 above, not smoothed over.
 
 Full specification: [`docs/specs/2026-08-30-sih26017-acquisition-delay-design.md`](docs/specs/2026-08-30-sih26017-acquisition-delay-design.md)
+(design intent) · [`pipeline/README.md`](pipeline/README.md) (what actually runs).
 
 ---
 
@@ -229,7 +283,8 @@ land-record portal or a grievance system.
 
 **A prediction and explanation layer over records that already exist.** It creates, corrects
 and adjudicates nothing. It does not predict how a court will rule, does not replace the
-CALA's judgement, and a LOW risk band is not a guarantee of on-time completion.
+CALA's judgement, and a LOW risk band is not a guarantee of on-time completion. Access control
+is demo-grade (an `X-Role` header, not a login) and is labelled as such everywhere it appears.
 
 ---
 
@@ -237,8 +292,9 @@ CALA's judgement, and a LOW risk band is not a guarantee of on-time completion.
 
 | Document | What it covers |
 |---|---|
-| [`docs/architecture/adhigrahan-radar-architecture.md`](docs/architecture/adhigrahan-radar-architecture.md) | Layered view, 13-table data model, statutory clocks, serving contract, guardrails |
-| [`pipeline/README.md`](pipeline/README.md) | Every stage, corpus facts worth quoting, and all seven deliberate deviations |
+| [`docs/plans/2026-09-09-adhigrahan-radar-implementation-blueprint.md`](docs/plans/2026-09-09-adhigrahan-radar-implementation-blueprint.md) | The audit and implementation plan this build executed |
+| [`docs/architecture/adhigrahan-radar-architecture.md`](docs/architecture/adhigrahan-radar-architecture.md) | Layered view, 15-table data model, statutory clocks, serving contract, guardrails |
+| [`pipeline/README.md`](pipeline/README.md) | Every stage s0-s15, corpus facts, and every deliberate deviation |
 | [`docs/specs/`](docs/specs) | Approved designs, newest first |
 | [`docs/product/vivaad-radar-prd.md`](docs/product/vivaad-radar-prd.md) | The linkage-subsystem PRD (§ references throughout the codebase point here) |
 | [`docs/product/SIH26017-idea-ppt-content.md`](docs/product/SIH26017-idea-ppt-content.md) | Submission content, with every figure traced to its source |

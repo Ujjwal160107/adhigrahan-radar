@@ -1,7 +1,5 @@
 import { CaseDetail, CaseParty, LandEvent, LinkedCase, ParcelDetail } from '../types/api';
 
-export const NOT_FOUND_CONFIDENCE = 0.97;
-
 export function landEventKind(e: LandEvent): string {
   return (e.type || e.event_type || '').toLowerCase();
 }
