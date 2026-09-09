@@ -1,0 +1,26 @@
+{
+ "doc_id": 275992,
+ "section": "3D",
+ "so_number": "S.O. 4841(E)",
+ "notified_on": "2026-09-01",
+ "parent_notified_on": "2026-03-03",
+ "nh_no": "NH49",
+ "km_from": 79.66,
+ "km_to": 192.7,
+ "state": "TAMIL NADU",
+ "districts": [
+  "RAMANATHAPURAM"
+ ],
+ "villages": [
+  "Urapuli",
+  "Manjur",
+  "Kummukkottai",
+  "Kusavankudi",
+  "Landai",
+  "Achunthanvayal",
+  "Palankulam",
+  "Pottanamkattan",
+  "Kazhukurani"
+ ],
+ "area_hectares": 3.3808
+}

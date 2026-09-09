@@ -1,0 +1,141 @@
+                                                CG-DL-E-30072025-265108
+                                             भाग II—खण्ड 3—उप-खण्ड (ii)
+                                          PART II—Section 3—Sub-section (ii)
+2                           THE GAZETTE OF INDIA : EXTRAORDINARY                                   [PART II—SEC. 3(ii)]
+1        100/1/1            सरकारी             रोड                             0.0064 (हेक्टेयर)                 0.0064
+2        100/1/2            जनिी               कृ जष                              0.32 (हेक्टेयर)                         0
+3        100/2/1            सरकारी             रोड                             0.0192 (हेक्टेयर)                 0.0192
+4        100/2/2            जनिी               कृ जष                           0.2571 (हेक्टेयर)                 0.2571
+5        101                                   कृ जष / रोड                     0.0481 (हेक्टेयर)                 0.0481
+6        102                सरकारी             नाला                            0.1301 (हेक्टेयर)                 0.1301
+7        106                सरकारी             आबादी (गांवठान)                 0.0179 (हेक्टेयर)                 0.0179
+8        159                सरकारी             गैर कृ जष                        0.004 (हेक्टेयर)                  0.004
+9        160                जनिी               आवासीय                          0.0454 (हेक्टेयर)                 0.0454
+10       161                जनिी               कृ जष/ससजचत                     0.4056 (हेक्टेयर)                 0.4056
+11       165                                   आवासीय/व्यावसाजयक                0.261 (हेक्टेयर)                  0.261
+12       184                जनिी               एग्रीकल्चर/ कमर्शियल            0.1641 (हेक्टेयर)                 0.1641
+13       185                                   चरागाह/व्यावसाजयक               0.0452 (हेक्टेयर)                 0.0452
+14       186                सरकारी             जनस्ट्तार                       0.0286 (हेक्टेयर)                 0.0286
+15       187                सरकारी             जनस्ट्तार                       0.0717 (हेक्टेयर)                 0.0717
+16       188                सरकारी             रोड                              1.418 (हेक्टेयर)                  1.418
+17       189                जनिी               कृ जष                           0.1684 (हेक्टेयर)                 0.1684
+18       190                जनिी               कृ जष                           0.1523 (हेक्टेयर)                 0.1523
+19       191                                                                   0.1544 (हेक्टेयर)                 0.1544
+20       192                सरकारी             रोड                              0.585 (हेक्टेयर)                  0.585
+21       193                                   रास्ट्ता/आवासीय                 0.0612 (हेक्टेयर)                 0.0612
+[भाग II—खण्ड 3(ii)]                     भारत का रािपत्र : असाधारण                                   3
+22     194            जनिी                                                  0.2054 (हेक्टेयर)   0.2054
+23     195            जनिी                  कृ जष/आवासीय                     0.031 (हेक्टेयर)    0.031
+24     197                                  कृ जष/आवासीय                    0.0948 (हेक्टेयर)   0.0948
+25     204            सरकारी                जनस्ट्तार                       0.0796 (हेक्टेयर)   0.0796
+26     205            जनिी                  कृ जष/आवासीय                    0.0365 (हेक्टेयर)   0.0365
+27     206            सरकारी                रोड                             0.4934 (हेक्टेयर)   0.4934
+28     208            जनिी                  कृ जष/ससजचत/ व्यावसाजयक         0.1662 (हेक्टेयर)   0.1662
+29     209/1          जनिी                  कृ जष                           0.0124 (हेक्टेयर)   0.0124
+30     209/2          जनिी                  कृ जष                            0.012 (हेक्टेयर)    0.012
+31     209/3          जनिी                  कृ जष                           0.0128 (हेक्टेयर)   0.0128
+32     210/1          जनिी                  कृ जष/आवासीय                    0.0591 (हेक्टेयर)   0.0591
+33     210/2          जनिी                  कृ जष                            0.073 (हेक्टेयर)    0.073
+34     210/3          जनिी                  कृ जष                           0.0527 (हेक्टेयर)   0.0527
+35     210/4          जनिी                  कृ जष                           0.0417 (हेक्टेयर)   0.0417
+36     211/1/1        जनिी                  कृ जष                           0.0359 (हेक्टेयर)   0.0359
+37     211/1/2        जनिी                  आवासीय                           0.025 (हेक्टेयर)    0.025
+38     224            सरकारी                रास्ट्ता                        0.0401 (हेक्टेयर)   0.0401
+39     248                                  रे वेन्द्यू जडपाटगमेंट/ कृ जष   0.3192 (हेक्टेयर)   0.3192
+40     249            जनिी                  आवासीय                          0.1122 (हेक्टेयर)   0.1122
+41     251            जनिी                  कृ जष/आवासीय                    0.0176 (हेक्टेयर)   0.0176
+42     252            जनिी                  कृ जष/व्यावसाजयक                0.0686 (हेक्टेयर)   0.0686
+43     253            जनिी                  कृ जष                           0.0771 (हेक्टेयर)   0.0771
+44     254            जनिी                                                  0.2049 (हेक्टेयर)   0.2049
+45     255            जनिी                  आवासीय                          0.0071 (हेक्टेयर)   0.0071
+46     256                                                                  0.0826 (हेक्टेयर)   0.0826
+47     265            सरकारी                रािस्ट्व जवभाग                  0.0029 (हेक्टेयर)   0.0029
+48     286/1          जनिी                  व्यावसाजयक                       0.097 (हेक्टेयर)    0.097
+49     286/2/1        जनिी                  व्यावसाजयक                      0.0245 (हेक्टेयर)   0.0245
+50     286/2/2        जनिी                  आवासीय                          0.0066 (हेक्टेयर)   0.0066
+51     286/2/3        जनिी                  व्यावसाजयक                      0.0049 (हेक्टेयर)   0.0049
+52     288            जनिी                                                  0.4184 (हेक्टेयर)   0.4184
+53     291            जनिी                  कृ जष/व्यावसाजयक/               0.0403 (हेक्टेयर)   0.0403
+4                    THE GAZETTE OF INDIA : EXTRAORDINARY                  [PART II—SEC. 3(ii)]
+54     291           जनिी                                   0.0403 (हेक्टेयर)          0.0403
+55     292           जनिी              कृ जष/व्यावसाजयक     0.5768 (हेक्टेयर)          0.5768
+56     294                             कृ जष/आवासीय         0.1603 (हेक्टेयर)          0.1603
+57     323                             आवासीय/कृ जष         0.2596 (हेक्टेयर)          0.2596
+58     324                             जनस्ट्तार/कृ जष      0.3982 (हेक्टेयर)          0.3982
+59     62            सरकारी            कांकर                0.0327 (हेक्टेयर)          0.0327
+60     63/1          जनिी              व्यावसाजयक           0.1149 (हेक्टेयर)          0.1149
+[भाग II—खण्ड 3(ii)]                  भारत का रािपत्र : असाधारण                           5
+6                     THE GAZETTE OF INDIA : EXTRAORDINARY                 [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]                        भारत का रािपत्र : असाधारण                           7
+8                       THE GAZETTE OF INDIA : EXTRAORDINARY                 [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]              भारत का रािपत्र : असाधारण                            9
+10                    THE GAZETTE OF INDIA : EXTRAORDINARY                    [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]                   भारत का रािपत्र : असाधारण                          11
+12                   THE GAZETTE OF INDIA : EXTRAORDINARY                  [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]           भारत का रािपत्र : असाधारण                            13
+14                     THE GAZETTE OF INDIA : EXTRAORDINARY                 [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]            भारत का रािपत्र : असाधारण                          15
+16                 THE GAZETTE OF INDIA : EXTRAORDINARY                 [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]            भारत का रािपत्र : असाधारण                          17
+18                  THE GAZETTE OF INDIA : EXTRAORDINARY                 [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]            भारत का रािपत्र : असाधारण                          19
+20                    THE GAZETTE OF INDIA : EXTRAORDINARY                 [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]                          भारत का रािपत्र : असाधारण                                              21
+                                                                    [फा. सं. NH-552G/Ujjain_Jhalawar/(3a)/3A/3]
+                            MINISTRY OF ROAD TRANSPORT AND HIGHWAYS
+                                                  NOTIFICATION
+                                            New Delhi, the 29th July, 2025
+          S.O. 3491(E).—In exercise of powers conferred by sub-section (1) of section 3A of the National Highways
+Act, 1956 (48 of 1956) (hereinafter referred to as the said Act), the Central Government, after being satisfied that for
+the public purpose, the land, the brief description of which is given in the Schedule below, is required for building
+(widening/two lane with paved shoulder/four laning etc.,), maintenance, management and operation of NH552G in
+the stretch of land from Km. 6.4 to Km. 22.9 in the district of UJJAIN in the state of MADHYA PRADESH, hereby
+declares its intention to acquire such land.
+          Any person interested in the said land may, within twenty-one days from the date of publication of this
+notification in the Official Gazette, object to the use of such land for the aforesaid purpose under sub-section(1) of
+section 3C of the said Act.
+         Every such objection shall be made to the Competent Authority, namely, SUB DIVISIONAL OFFICER
+(R),GHATTIYA in writing and shall set out the grounds thereof and the Competent Authority shall give the objector
+an opportunity of being heard, either in person or by a legal practitioner, and may, after hearing all such objections
+and after making such further enquiry, if any, as the Competent Authority thinks necessary, by order, either allow or
+disallow the objections.
+         Any order made by the Competent Authority under sub-section (2) of section 3C of the said Act shall be
+final.
+
+22                              THE GAZETTE OF INDIA : EXTRAORDINARY                            [PART II—SEC. 3(ii)]
+
+         The land plans and other details of the land to be acquired under their notification are available and can be
+inspected by the interested person at the aforesaid office of the Competent Authority.
+                                                    SCHEDULE
+State: MADHYA PRADESH                             District: UJJAIN
+Sl. Survey/Plot                Type of Land                Nature of Land                        Area          Area
+No.  Number                                                                            (in Local Unit) (in Hectares)
+Taluk: Ghatiya
+Village: Surasa
+[भाग II—खण्ड 3(ii)]                      भारत का रािपत्र : असाधारण                                23
+24                           THE GAZETTE OF INDIA : EXTRAORDINARY               [PART II—SEC. 3(ii)]
+Village: Kamed
+[भाग II—खण्ड 3(ii)]                       भारत का रािपत्र : असाधारण                            25
+Village: Piplai
+26                           THE GAZETTE OF INDIA : EXTRAORDINARY             [PART II—SEC. 3(ii)]
+Village: Kadwali
+Village: Jaithal
+[भाग II—खण्ड 3(ii)]                         भारत का रािपत्र : असाधारण                               27
+Village: Ishakpur
+28                          THE GAZETTE OF INDIA : EXTRAORDINARY               [PART II—SEC. 3(ii)]
+Village: Nipanya Goyal
+[भाग II—खण्ड 3(ii)]                      भारत का रािपत्र : असाधारण                             29
+Village: Najarpur
+30                          THE GAZETTE OF INDIA : EXTRAORDINARY               [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]             भारत का रािपत्र : असाधारण                                   31
+32                           THE GAZETTE OF INDIA : EXTRAORDINARY               [PART II—SEC. 3(ii)]
+Village: Ghatiya
+[भाग II—खण्ड 3(ii)]             भारत का रािपत्र : असाधारण                              33
+34                           THE GAZETTE OF INDIA : EXTRAORDINARY               [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]              भारत का रािपत्र : असाधारण                              35
+36                          THE GAZETTE OF INDIA : EXTRAORDINARY                  [PART II—SEC. 3(ii)]
+[भाग II—खण्ड 3(ii)]                      भारत का रािपत्र : असाधारण                               37
+Village: Jalwa
+Village: Ralayati
+38                             THE GAZETTE OF INDIA : EXTRAORDINARY                                  [PART II—SEC. 3(ii)]
+                                                                           [F. No. NH-552G/Ujjain_Jhalawar/(3a)/3A/3]

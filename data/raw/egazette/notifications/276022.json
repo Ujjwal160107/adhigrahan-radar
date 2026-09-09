@@ -1,0 +1,19 @@
+{
+ "doc_id": 276022,
+ "section": "3D",
+ "so_number": "S.O. 4837(E)",
+ "notified_on": "2026-09-01",
+ "parent_notified_on": "2026-06-02",
+ "nh_no": "NH527A",
+ "km_from": 35.0,
+ "km_to": 61.04,
+ "state": "BIHAR",
+ "districts": [
+  "MADHUBANI"
+ ],
+ "villages": [
+  "Lohna",
+  "Dubauli Khaira"
+ ],
+ "area_hectares": 2.50212
+}

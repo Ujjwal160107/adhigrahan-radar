@@ -1,0 +1,35 @@
+{
+ "doc_id": 275725,
+ "section": "3D",
+ "so_number": "S.O. 4657(E)",
+ "notified_on": "2026-08-24",
+ "parent_notified_on": "2025-09-02",
+ "nh_no": "NH114A",
+ "km_from": null,
+ "km_to": null,
+ "state": "JHARKHAND",
+ "districts": [
+  "DUMKA"
+ ],
+ "villages": [
+  "Belguma Khurd",
+  "Sugnibad",
+  "Jama",
+  "Mahulbana",
+  "Ghoribad",
+  "Kurman",
+  "Fusbahiyar",
+  "Mundmala",
+  "Shilanda",
+  "Asanthar",
+  "Jarapura",
+  "Palasiya",
+  "Maharo",
+  "Sarsabad",
+  "Saruwa",
+  "Hathiyapathar",
+  "Haripur",
+  "Babupur"
+ ],
+ "area_hectares": 61.59664
+}

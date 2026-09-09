@@ -72,7 +72,8 @@ frontend.
 | Backend — 10 risk/project/model/auth endpoints | **Built** |
 | Frontend — risk dashboard, project portfolio, project detail, model registry | **Built** |
 | Frontend — litigation search, result, officer heatmap, watchlist | **Built** (demoted to `/lookup/*`, the evidence drill-down layer) |
-| Tests | **164** (126 backend/pipeline + 38 frontend), all green |
+| Ingestion `ingest/` | **Built.** Real §3A/§3D notifications from the Gazette of India; **not yet consumed by the risk engine** |
+| Tests | **362** (324 backend/pipeline/ingest + 38 frontend), all green |
 
 Current build:
 
@@ -90,7 +91,7 @@ Current build:
 | Risk bands on open stages | 15 HIGH · 29 MEDIUM · 3 LOW |
 | Median lead time (open stages) | 53 days |
 | Models shipped | hgb_calibrated (2 stages) · base_rate (2 — the naive prior beat both learned models there; HIGH suppressed for both) · logistic_regression (1) |
-| Tests | 164, all green |
+| Tests | 362, all green |
 
 ---
 
@@ -100,7 +101,8 @@ Current build:
 make doctor    # verify Python 3.11-3.13 and Node >=20 before installing anything
 make setup     # python venv + pip install + npm install
 make build     # regenerate data/output from the committed contract (s0-s15)
-make test      # 126 backend/pipeline tests + 38 frontend tests
+make ingest    # refresh data/raw from the live sources - separate, never part of build
+make test      # 324 backend/pipeline/ingest tests + 38 frontend tests
 make api       # http://localhost:8000
 make web       # http://localhost:5173   (separate terminal)
 ```
@@ -156,6 +158,10 @@ adhigrahan-radar/
 ├── frontend/           React (Vite) + Tailwind + Leaflet + react-router-dom
 │   └── src/pages/       RiskDashboard · ProjectPortfolio · ProjectDetail · ModelHistory ·
 │                        LookupApp (Search · Processing · Result · OfficerDashboard · Watchlist)
+├── ingest/             dynamic ingestion from the live government sources
+│   ├── egazette/       gazette catalog, retrieval and notification parsing
+│   ├── bhoomirashi/    the portal's open district/tehsil master data
+│   └── README.md       what it produces, and the four things worth knowing
 ├── pipeline/           the offline build, one file per stage
 │   ├── s0..s7          linkage engine (built)
 │   ├── s8..s15         risk engine (built)
@@ -247,6 +253,41 @@ technical reviewer is an unlabelled fabricated number.
    with no litigation corpus), the UI says so explicitly rather than substituting a default.
    The frontend also never re-derives a decision the pipeline made: the model registry
    reports the calibration branch `s12` recorded, it does not recompute it from a row count.
+
+---
+
+## Real acquisition data
+
+`data/raw/bhoomirashi/` was an empty placeholder, which is why every acquisition row in the
+build below is synthetic and why `n_test_real = 0` everywhere. The implementation blueprint
+calls that risk **X-1**, "the single largest risk".
+
+`ingest/` closes it at the source. It harvests real §3A and §3D notifications from the
+Gazette of India — the authoritative publication channel for National Highways Act
+acquisitions — and writes them to `data/raw/` as a contract the risk engine can consume:
+
+```bash
+make ingest                        # long-running, resumable, incremental
+make ingest ARGS="--limit 200"     # a bounded first run
+```
+
+A §3D notification is self-describing: it states its own date and recites the date of the
+§3A it closes, so **one document yields a complete, real, labelled interval** against the
+365-day s.3D(3) clock — the one whose breach voids the notification. Three intervals from
+the first harvest: 218, 357 and 363 days. Two came within days of lapsing.
+
+**Only stage 1 can ever be real.** Awards under §3G, compensation disbursement and taking of
+possession are never gazetted, so the other four stages stay synthetic. That is a limit of
+the public record, and it means `n_test_real` has to be reported *per stage* rather than
+globally.
+
+`make build` still never touches the network — `make ingest` is a separate, explicit,
+human-run command, and the build reads only what it left behind.
+
+Wiring the contract into `s8`–`s12` is ML work and is deliberately not done here:
+[`docs/specs/2026-09-10-acquisition-contract-handoff.md`](docs/specs/2026-09-10-acquisition-contract-handoff.md)
+specifies it. Until that lands, **honesty rule 2 below still applies in full** — the shipped
+build is trained and scored entirely on synthetic acquisition rows.
 
 ---
 

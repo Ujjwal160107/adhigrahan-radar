@@ -1,0 +1,19 @@
+{
+ "doc_id": 275812,
+ "section": "3D",
+ "so_number": "S.O. 4724(E)",
+ "notified_on": "2026-08-25",
+ "parent_notified_on": "2025-12-16",
+ "nh_no": "NH44",
+ "km_from": 94.0,
+ "km_to": 180.0,
+ "state": "TAMIL NADU",
+ "districts": [
+  "SALEM"
+ ],
+ "villages": [
+  "Vellar",
+  "Sekkarapatti"
+ ],
+ "area_hectares": 2.915
+}

@@ -3,7 +3,8 @@
 # Fresh clone, in order:
 #   make setup     install python + node dependencies
 #   make build     regenerate data/output from the committed contract (s0-s15)
-#   make test      126 backend/pipeline tests + 38 frontend tests, all green
+#   make ingest    refresh data/raw from the live sources (separate, never in build)
+#   make test      324 backend/pipeline/ingest tests + 38 frontend tests, all green
 #   make api       serve on :8000
 #   make web       serve on :5173  (separate terminal)
 
@@ -27,7 +28,7 @@ BASE_PY := $(shell for c in python3.13 python3.12 python3.11 python3 python; do 
 	    && { echo $$c; break; }; \
 	done)
 
-.PHONY: setup build build-all test test-py test-web api web diagrams clean lint doctor
+.PHONY: setup build build-all ingest test test-py test-web api web diagrams clean lint doctor
 
 setup: doctor
 	$(BASE_PY) -m venv $(VENV)
@@ -59,6 +60,16 @@ build:
 ## Full build including s0. Requires the external land-cases corpus.
 build-all:
 	$(PY) pipeline/run_all.py
+
+## Refresh data/raw/ from the live government sources. NOT part of `make
+## build` and never run during a demo: the build reads data/raw/ and never
+## opens a socket. Long-running (a full harvest is ~20k documents), resumable,
+## and incremental - a second run fetches only what is new.
+##   make ingest
+##   make ingest ARGS="--since 2025 --limit 200"
+##   make ingest ARGS="--dry-run"
+ingest:
+	$(PY) -m ingest.refresh $(ARGS)
 
 test: test-py test-web
 

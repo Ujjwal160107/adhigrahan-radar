@@ -1,0 +1,23 @@
+{
+ "doc_id": 275830,
+ "section": "3D",
+ "so_number": "S.O. 4728(E)",
+ "notified_on": "2026-08-25",
+ "parent_notified_on": "2026-07-10",
+ "nh_no": "NH227A",
+ "km_from": 150.0,
+ "km_to": 190.0,
+ "state": "UTTAR PRADESH",
+ "districts": [
+  "DEORIA"
+ ],
+ "villages": [
+  "KAPARWAR BANGAR",
+  "RAIPURA CHAKLAL ANDAR NAGAR",
+  "BHIKKAM CHHAPRA",
+  "Sutawar",
+  "KUNDAULI",
+  "PATANA"
+ ],
+ "area_hectares": 1.0048
+}

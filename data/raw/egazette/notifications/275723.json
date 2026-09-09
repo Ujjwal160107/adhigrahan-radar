@@ -1,0 +1,18 @@
+{
+ "doc_id": 275723,
+ "section": "3D",
+ "so_number": "S.O. 4654(E)",
+ "notified_on": "2026-08-24",
+ "parent_notified_on": "2026-06-15",
+ "nh_no": "NH47",
+ "km_from": 13.55,
+ "km_to": 34.1,
+ "state": "MADHYA PRADESH",
+ "districts": [
+  "HARDA"
+ ],
+ "villages": [
+  "Sodalpur"
+ ],
+ "area_hectares": 0.05
+}

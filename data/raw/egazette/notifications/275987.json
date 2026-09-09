@@ -1,0 +1,40 @@
+{
+ "doc_id": 275987,
+ "section": "3A",
+ "so_number": "S.O. 4877(E)",
+ "notified_on": "2026-09-03",
+ "parent_notified_on": null,
+ "nh_no": "NH334A",
+ "km_from": 33.3,
+ "km_to": 60.231,
+ "state": "UTTARAKHAND",
+ "districts": [
+  "HARIDWAR"
+ ],
+ "villages": [
+  "Badshahpur- Sherpur-Bhattipur",
+  "Kishanpur",
+  "Noorpur Panjanhedi",
+  "Missarpur",
+  "Katarpur Alipur",
+  "Jiyapota",
+  "Padar Tha Dhunpurah",
+  "Mustafabad",
+  "Bhawanipur Jamalpur Grant",
+  "Shahpur Sheetla Kheda",
+  "Dhamoli Urf Khair Wala",
+  "Jasodpur",
+  "Banganga-2",
+  "Mohamadpur Kunhari",
+  "Jagjeetpur",
+  "Jamalpur Kalan",
+  "Ferupur Ramkheda",
+  "Fidayipur",
+  "Akbarpur Ood",
+  "Punderpur Pipli",
+  "Sultanpur Adampur",
+  "Tikampur",
+  "Budha Kheda"
+ ],
+ "area_hectares": 146.1406
+}

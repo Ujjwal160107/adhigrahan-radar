@@ -1,0 +1,18 @@
+{
+ "doc_id": 276004,
+ "section": "3A",
+ "so_number": null,
+ "notified_on": null,
+ "parent_notified_on": null,
+ "nh_no": "NH80",
+ "km_from": 190.0,
+ "km_to": 215.0,
+ "state": "JHARKHAND",
+ "districts": [
+  "SAHIBGANJ"
+ ],
+ "villages": [
+  "Hajipur Bhitha"
+ ],
+ "area_hectares": null
+}

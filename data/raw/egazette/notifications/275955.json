@@ -1,0 +1,18 @@
+{
+ "doc_id": 275955,
+ "section": "3D",
+ "so_number": "S.O. 4842(E)",
+ "notified_on": "2026-09-01",
+ "parent_notified_on": "2026-07-01",
+ "nh_no": "NH34",
+ "km_from": 135.9,
+ "km_to": 170.7,
+ "state": "MADHYA PRADESH",
+ "districts": [
+  "CHHATARPUR"
+ ],
+ "villages": [
+  "Dhadari"
+ ],
+ "area_hectares": 0.76
+}

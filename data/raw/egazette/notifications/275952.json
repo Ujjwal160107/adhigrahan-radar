@@ -1,0 +1,18 @@
+{
+ "doc_id": 275952,
+ "section": "3D",
+ "so_number": "S.O. 4843(E)",
+ "notified_on": "2026-09-01",
+ "parent_notified_on": "2025-12-24",
+ "nh_no": "NH48",
+ "km_from": 144.15,
+ "km_to": 145.4,
+ "state": "GUJARAT",
+ "districts": [
+  "Vadodra"
+ ],
+ "villages": [
+  "Bamangam"
+ ],
+ "area_hectares": 0.5502
+}

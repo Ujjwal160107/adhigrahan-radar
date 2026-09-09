@@ -1,0 +1,18 @@
+{
+ "doc_id": 275705,
+ "section": "3D",
+ "so_number": "S.O. 4653(E)",
+ "notified_on": "2026-08-24",
+ "parent_notified_on": "2025-10-07",
+ "nh_no": "NH60",
+ "km_from": 12.19,
+ "km_to": 42.0,
+ "state": "MAHARASHTRA",
+ "districts": [
+  "PUNE"
+ ],
+ "villages": [
+  "Kuruli"
+ ],
+ "area_hectares": 0.1064
+}

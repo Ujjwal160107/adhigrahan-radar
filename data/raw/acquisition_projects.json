@@ -1,0 +1,1384 @@
+[
+ {
+  "area_hectares": 0.3236,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "AHMEDNAGAR"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH548D",
+  "notified_3a_on": "2026-02-27",
+  "project_id": "PRJ-AHM-G275721",
+  "republication_count": 0,
+  "so_number": "S.O. 4660(E)",
+  "source_doc_ids": [
+   275721
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Adhalgaon"
+  ]
+ },
+ {
+  "area_hectares": 21.20654,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "BAGALKOT"
+  ],
+  "km_from": 89.9,
+  "km_to": 136.1,
+  "nh_no": "NH748A",
+  "notified_3a_on": "2025-10-22",
+  "project_id": "PRJ-BAG-G275733",
+  "republication_count": 0,
+  "so_number": "S.O. 4659(E)",
+  "source_doc_ids": [
+   275733
+  ],
+  "state": "KARNATAKA",
+  "villages": [
+   "Kataginahalli",
+   "Nimbalgundi",
+   "Chittawadgi",
+   "Konkanakoppa",
+   "Togunasi",
+   "Muradi",
+   "Kotikalla"
+  ]
+ },
+ {
+  "area_hectares": 5.7702,
+  "declared_3d_on": "2026-08-14",
+  "districts": [
+   "BARABANKI"
+  ],
+  "km_from": 140.96,
+  "km_to": 160.2,
+  "nh_no": "NH227B",
+  "notified_3a_on": "2025-12-16",
+  "project_id": "PRJ-BAR-G275511",
+  "republication_count": 0,
+  "so_number": "S.O. 4524(E)",
+  "source_doc_ids": [
+   275511
+  ],
+  "state": "UTTAR PRADESH",
+  "villages": [
+   "BARHUWAN",
+   "Pure Kamgar",
+   "Aliabad",
+   "Kamiyar",
+   "Chandamau",
+   "Belkhara Mehfuz",
+   "Belkhara Sailab"
+  ]
+ },
+ {
+  "area_hectares": 7.2768,
+  "declared_3d_on": null,
+  "districts": [
+   "BHANDARA"
+  ],
+  "km_from": 51.0,
+  "km_to": 69.0,
+  "nh_no": null,
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-BHA-G275989",
+  "republication_count": 0,
+  "so_number": "S.O. 4879(E)",
+  "source_doc_ids": [
+   275989
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Mahalgaon",
+   "Deosarra",
+   "Binakhi",
+   "Brahmantola",
+   "Gondkhairi",
+   "Sindpuri",
+   "Chulhad",
+   "Sihora",
+   "Machhera",
+   "Ranera",
+   "Bapera",
+   "Mohgaon Khadan",
+   "Sitepar",
+   "hardoli",
+   "Khairlanji"
+  ]
+ },
+ {
+  "area_hectares": 0.2034,
+  "declared_3d_on": "2026-08-14",
+  "districts": [
+   "BHOPAL"
+  ],
+  "km_from": 0.8,
+  "km_to": 1.0,
+  "nh_no": "NH146",
+  "notified_3a_on": "2026-05-13",
+  "project_id": "PRJ-BHO-G275501",
+  "republication_count": 0,
+  "so_number": "S.O. 4514(E)",
+  "source_doc_ids": [
+   275501
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Khajuri Khurd",
+   "Khajuri Kalan"
+  ]
+ },
+ {
+  "area_hectares": 0.2794,
+  "declared_3d_on": "2026-09-01",
+  "districts": [
+   "BHOPAL"
+  ],
+  "km_from": 0.0,
+  "km_to": 1.9,
+  "nh_no": "NH146",
+  "notified_3a_on": "2026-06-16",
+  "project_id": "PRJ-BHO-G275925",
+  "republication_count": 0,
+  "so_number": "S.O. 4832(E)",
+  "source_doc_ids": [
+   275925
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Piplani Chamaran"
+  ]
+ },
+ {
+  "area_hectares": 0.76,
+  "declared_3d_on": "2026-09-01",
+  "districts": [
+   "CHHATARPUR"
+  ],
+  "km_from": 135.9,
+  "km_to": 170.7,
+  "nh_no": "NH34",
+  "notified_3a_on": "2026-07-01",
+  "project_id": "PRJ-CHH-G275955",
+  "republication_count": 0,
+  "so_number": "S.O. 4842(E)",
+  "source_doc_ids": [
+   275955
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Dhadari"
+  ]
+ },
+ {
+  "area_hectares": 1.0048,
+  "declared_3d_on": "2026-08-25",
+  "districts": [
+   "DEORIA"
+  ],
+  "km_from": 150.0,
+  "km_to": 190.0,
+  "nh_no": "NH227A",
+  "notified_3a_on": "2026-07-10",
+  "project_id": "PRJ-DEO-G275830",
+  "republication_count": 0,
+  "so_number": "S.O. 4728(E)",
+  "source_doc_ids": [
+   275830
+  ],
+  "state": "UTTAR PRADESH",
+  "villages": [
+   "KAPARWAR BANGAR",
+   "RAIPURA CHAKLAL ANDAR NAGAR",
+   "BHIKKAM CHHAPRA",
+   "Sutawar",
+   "KUNDAULI",
+   "PATANA"
+  ]
+ },
+ {
+  "area_hectares": 61.59664,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "DUMKA"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH114A",
+  "notified_3a_on": "2025-09-02",
+  "project_id": "PRJ-DUM-G275725",
+  "republication_count": 0,
+  "so_number": "S.O. 4657(E)",
+  "source_doc_ids": [
+   275725
+  ],
+  "state": "JHARKHAND",
+  "villages": [
+   "Belguma Khurd",
+   "Sugnibad",
+   "Jama",
+   "Mahulbana",
+   "Ghoribad",
+   "Kurman",
+   "Fusbahiyar",
+   "Mundmala",
+   "Shilanda",
+   "Asanthar",
+   "Jarapura",
+   "Palasiya",
+   "Maharo",
+   "Sarsabad",
+   "Saruwa",
+   "Hathiyapathar",
+   "Haripur",
+   "Babupur"
+  ]
+ },
+ {
+  "area_hectares": 105.7296,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "East Jaintia Hills"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": null,
+  "notified_3a_on": "2026-04-20",
+  "project_id": "PRJ-EAS-G275703",
+  "republication_count": 0,
+  "so_number": "S.O. 4658(E)",
+  "source_doc_ids": [
+   275703
+  ],
+  "state": "MEGHALAYA",
+  "villages": [
+   "Lakadong Umlatdoh",
+   "Lakadong Ummat"
+  ]
+ },
+ {
+  "area_hectares": 32.7762,
+  "declared_3d_on": null,
+  "districts": [
+   "East Jaintia Hills"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH6",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-EAS-G276035",
+  "republication_count": 0,
+  "so_number": "S.O. 4880(E)",
+  "source_doc_ids": [
+   276035
+  ],
+  "state": "MEGHALAYA",
+  "villages": [
+   "Huroi",
+   "Lahalein"
+  ]
+ },
+ {
+  "area_hectares": 0.0324,
+  "declared_3d_on": "2026-09-01",
+  "districts": [
+   "GHAZIABAD"
+  ],
+  "km_from": 14.75,
+  "km_to": 26.15,
+  "nh_no": "NH709B",
+  "notified_3a_on": "2026-05-08",
+  "project_id": "PRJ-GHA-G275924",
+  "republication_count": 0,
+  "so_number": "S.O. 4836(E)",
+  "source_doc_ids": [
+   275924
+  ],
+  "state": "UTTAR PRADESH",
+  "villages": [
+   "Sadullabad"
+  ]
+ },
+ {
+  "area_hectares": 0.052,
+  "declared_3d_on": "2026-08-14",
+  "districts": [
+   "GIR SOMNATH"
+  ],
+  "km_from": 82.093,
+  "km_to": 102.284,
+  "nh_no": "NH351K",
+  "notified_3a_on": "2025-09-23",
+  "project_id": "PRJ-GIR-G275497",
+  "republication_count": 0,
+  "so_number": "S.O. 4522(E)",
+  "source_doc_ids": [
+   275497
+  ],
+  "state": "GUJARAT",
+  "villages": [
+   "Bhacha",
+   "Kansari",
+   "Una"
+  ]
+ },
+ {
+  "area_hectares": 1.3011,
+  "declared_3d_on": "2026-08-25",
+  "districts": [
+   "GORAKHPUR"
+  ],
+  "km_from": 130.0,
+  "km_to": 150.0,
+  "nh_no": "NH227A",
+  "notified_3a_on": "2026-02-19",
+  "project_id": "PRJ-GOR-G275822",
+  "republication_count": 0,
+  "so_number": "S.O. 4727(E)",
+  "source_doc_ids": [
+   275822
+  ],
+  "state": "UTTAR PRADESH",
+  "villages": [
+   "Baareedeeha Ta-Havelee",
+   "Raamapuraganeshee Ta-HaveleeÂ",
+   "Khadesaree Eh. Ta- Sikandar",
+   "NetavarÂ Pattee Mu."
+  ]
+ },
+ {
+  "area_hectares": 0.05,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "HARDA"
+  ],
+  "km_from": 13.55,
+  "km_to": 34.1,
+  "nh_no": "NH47",
+  "notified_3a_on": "2026-06-15",
+  "project_id": "PRJ-HAR-G275723",
+  "republication_count": 0,
+  "so_number": "S.O. 4654(E)",
+  "source_doc_ids": [
+   275723
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Sodalpur"
+  ]
+ },
+ {
+  "area_hectares": 146.1406,
+  "declared_3d_on": null,
+  "districts": [
+   "HARIDWAR"
+  ],
+  "km_from": 33.3,
+  "km_to": 60.231,
+  "nh_no": "NH334A",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-HAR-G275987",
+  "republication_count": 0,
+  "so_number": "S.O. 4877(E)",
+  "source_doc_ids": [
+   275987
+  ],
+  "state": "UTTARAKHAND",
+  "villages": [
+   "Badshahpur- Sherpur-Bhattipur",
+   "Kishanpur",
+   "Noorpur Panjanhedi",
+   "Missarpur",
+   "Katarpur Alipur",
+   "Jiyapota",
+   "Padar Tha Dhunpurah",
+   "Mustafabad",
+   "Bhawanipur Jamalpur Grant",
+   "Shahpur Sheetla Kheda",
+   "Dhamoli Urf Khair Wala",
+   "Jasodpur",
+   "Banganga-2",
+   "Mohamadpur Kunhari",
+   "Jagjeetpur",
+   "Jamalpur Kalan",
+   "Ferupur Ramkheda",
+   "Fidayipur",
+   "Akbarpur Ood",
+   "Punderpur Pipli",
+   "Sultanpur Adampur",
+   "Tikampur",
+   "Budha Kheda"
+  ]
+ },
+ {
+  "area_hectares": 3.0752,
+  "declared_3d_on": "2026-09-01",
+  "districts": [
+   "INDORE"
+  ],
+  "km_from": 8.8,
+  "km_to": 20.87,
+  "nh_no": null,
+  "notified_3a_on": "2026-06-16",
+  "project_id": "PRJ-IND-G275950",
+  "republication_count": 0,
+  "so_number": "S.O. 4835(E)",
+  "source_doc_ids": [
+   275950
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Kishanpura",
+   "Lalendipura",
+   "Rolai",
+   "Betma Khurd",
+   "Mohna"
+  ]
+ },
+ {
+  "area_hectares": 0.04432,
+  "declared_3d_on": "2026-08-25",
+  "districts": [
+   "JABALPUR"
+  ],
+  "km_from": 75.48,
+  "km_to": 98.95,
+  "nh_no": null,
+  "notified_3a_on": "2026-05-14",
+  "project_id": "PRJ-JAB-G275769",
+  "republication_count": 0,
+  "so_number": "S.O. 4723(E)",
+  "source_doc_ids": [
+   275769
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Kushner"
+  ]
+ },
+ {
+  "area_hectares": 0.184,
+  "declared_3d_on": null,
+  "districts": [
+   "KAIMUR (BHABUA )"
+  ],
+  "km_from": 0.0,
+  "km_to": 30.66,
+  "nh_no": "NH319A",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-KAI-G275985",
+  "republication_count": 0,
+  "so_number": "S.O. 4873(E)",
+  "source_doc_ids": [
+   275985
+  ],
+  "state": "BIHAR",
+  "villages": [
+   "Pajarawan",
+   "Darwan"
+  ]
+ },
+ {
+  "area_hectares": 2.304,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "KANDHAMAL"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": null,
+  "notified_3a_on": "2026-04-22",
+  "project_id": "PRJ-KAN-G275722",
+  "republication_count": 0,
+  "so_number": "S.O. 4655(E)",
+  "source_doc_ids": [
+   275722
+  ],
+  "state": "ODISHA",
+  "villages": [
+   "Kaladi",
+   "Tilakpada"
+  ]
+ },
+ {
+  "area_hectares": 1.544,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "Khargone"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH347C",
+  "notified_3a_on": "2026-03-03",
+  "project_id": "PRJ-KHA-G275706",
+  "republication_count": 0,
+  "so_number": "S.O. 4652(E)",
+  "source_doc_ids": [
+   275706
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Manchar",
+   "Rajpura",
+   "Meharja"
+  ]
+ },
+ {
+  "area_hectares": 1.496,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "Khargone"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH347C",
+  "notified_3a_on": "2026-03-03",
+  "project_id": "PRJ-KHA-G275707",
+  "republication_count": 0,
+  "so_number": "S.O. 4651(E)",
+  "source_doc_ids": [
+   275707
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Jamla",
+   "Jamli",
+   "Fazalipura",
+   "Gopalpura"
+  ]
+ },
+ {
+  "area_hectares": 0.0356,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "KHORDHA"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": null,
+  "notified_3a_on": "2026-02-12",
+  "project_id": "PRJ-KHO-G275715",
+  "republication_count": 0,
+  "so_number": "S.O. 4663(E)",
+  "source_doc_ids": [
+   275715
+  ],
+  "state": "ODISHA",
+  "villages": [
+   "Gurujanga"
+  ]
+ },
+ {
+  "area_hectares": 0.2474,
+  "declared_3d_on": "2026-09-01",
+  "districts": [
+   "LAHUL AND SPITI"
+  ],
+  "km_from": 0.0,
+  "km_to": 75.0,
+  "nh_no": "NH505",
+  "notified_3a_on": "2025-09-02",
+  "project_id": "PRJ-LAH-G275927",
+  "republication_count": 0,
+  "so_number": "S.O. 4833(E)",
+  "source_doc_ids": [
+   275927
+  ],
+  "state": "HIMACHAL PRADESH",
+  "villages": [
+   "Kaza Khas (70/1)",
+   "Kaza Soma",
+   "Shego",
+   "Dhankar",
+   "Lingti",
+   "Poh",
+   "Lari"
+  ]
+ },
+ {
+  "area_hectares": 2.50212,
+  "declared_3d_on": "2026-09-01",
+  "districts": [
+   "MADHUBANI"
+  ],
+  "km_from": 35.0,
+  "km_to": 61.04,
+  "nh_no": "NH527A",
+  "notified_3a_on": "2026-06-02",
+  "project_id": "PRJ-MAD-G276022",
+  "republication_count": 0,
+  "so_number": "S.O. 4837(E)",
+  "source_doc_ids": [
+   276022
+  ],
+  "state": "BIHAR",
+  "villages": [
+   "Lohna",
+   "Dubauli Khaira"
+  ]
+ },
+ {
+  "area_hectares": 5.8582,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "MORENA"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH552",
+  "notified_3a_on": "2026-03-16",
+  "project_id": "PRJ-MOR-G275732",
+  "republication_count": 0,
+  "so_number": "S.O. 4662(E)",
+  "source_doc_ids": [
+   275732
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Hingauna Khurd",
+   "Ganjrampur",
+   "Morena Gaon",
+   "Atarsuma",
+   "Lalor",
+   "Mudiya Kheda",
+   "Jigani"
+  ]
+ },
+ {
+  "area_hectares": 34.78523,
+  "declared_3d_on": "2026-08-14",
+  "districts": [
+   "Nashik"
+  ],
+  "km_from": 53.5,
+  "km_to": 105.47,
+  "nh_no": "NH160A",
+  "notified_3a_on": "2025-10-07",
+  "project_id": "PRJ-NAS-G275491",
+  "republication_count": 0,
+  "so_number": "S.O. 4519(E)",
+  "source_doc_ids": [
+   275491
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Amboli",
+   "Ambai",
+   "Sapgaon",
+   "Pimlad Trimbak",
+   "Pegalwadi (Trimbak)",
+   "Pahine",
+   "Kharoli",
+   "Trimbak",
+   "Pegalwadi (Nashik)",
+   "Mhsurli",
+   "Shevgedang",
+   "Wanjole",
+   "Aahurli",
+   "Awali Dumala",
+   "Saturli",
+   "Bhavli Budruk",
+   "Korapgaon",
+   "Kurnoli",
+   "Waki",
+   "Khambale",
+   "Dahalewadi"
+  ]
+ },
+ {
+  "area_hectares": 3.5292,
+  "declared_3d_on": "2026-08-31",
+  "districts": [
+   "PALGHAR"
+  ],
+  "km_from": 110.0,
+  "km_to": 156.0,
+  "nh_no": "NH160A",
+  "notified_3a_on": "2026-04-08",
+  "project_id": "PRJ-PAL-G275899",
+  "republication_count": 0,
+  "so_number": "S.O. 4807(E)",
+  "source_doc_ids": [
+   275899
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Kastwadi"
+  ]
+ },
+ {
+  "area_hectares": 0.202,
+  "declared_3d_on": "2026-08-31",
+  "districts": [
+   "PALAKKAD"
+  ],
+  "km_from": 182.207,
+  "km_to": 235.702,
+  "nh_no": "NH544",
+  "notified_3a_on": "2026-03-16",
+  "project_id": "PRJ-PAL-G275918",
+  "republication_count": 0,
+  "so_number": "S.O. 4808(E)",
+  "source_doc_ids": [
+   275918
+  ],
+  "state": "KERALA",
+  "villages": [
+   "Pudussery West"
+  ]
+ },
+ {
+  "area_hectares": 1.206,
+  "declared_3d_on": "2026-08-14",
+  "districts": [
+   "PORBANDAR"
+  ],
+  "km_from": 0.0,
+  "km_to": 17.4,
+  "nh_no": "NH151K",
+  "notified_3a_on": "2025-10-22",
+  "project_id": "PRJ-POR-G275496",
+  "republication_count": 0,
+  "so_number": "S.O. 4515(E)",
+  "source_doc_ids": [
+   275496
+  ],
+  "state": "GUJARAT",
+  "villages": [
+   "Bakharla",
+   "Pandavadar"
+  ]
+ },
+ {
+  "area_hectares": 0.12141,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "PRAKASAM"
+  ],
+  "km_from": 1182.802,
+  "km_to": 1366.547,
+  "nh_no": "NH16",
+  "notified_3a_on": "2026-02-19",
+  "project_id": "PRJ-PRA-G275758",
+  "republication_count": 0,
+  "so_number": "S.O. 4668(E)",
+  "source_doc_ids": [
+   275758
+  ],
+  "state": "ANDHRA PRADESH",
+  "villages": [
+   "Gundlapalli"
+  ]
+ },
+ {
+  "area_hectares": 0.1064,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "PUNE"
+  ],
+  "km_from": 12.19,
+  "km_to": 42.0,
+  "nh_no": "NH60",
+  "notified_3a_on": "2025-10-07",
+  "project_id": "PRJ-PUN-G275705",
+  "republication_count": 0,
+  "so_number": "S.O. 4653(E)",
+  "source_doc_ids": [
+   275705
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Kuruli"
+  ]
+ },
+ {
+  "area_hectares": 0.03238,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "PURBA BARDHAMAN"
+  ],
+  "km_from": 521.12,
+  "km_to": 588.87,
+  "nh_no": "NH19",
+  "notified_3a_on": "2025-09-23",
+  "project_id": "PRJ-PUR-G275720",
+  "republication_count": 0,
+  "so_number": "S.O. 4664(E)",
+  "source_doc_ids": [
+   275720
+  ],
+  "state": "WEST BENGAL",
+  "villages": [
+   "Gopalnagar (P)"
+  ]
+ },
+ {
+  "area_hectares": 0.074,
+  "declared_3d_on": "2026-08-14",
+  "districts": [
+   "RAISEN"
+  ],
+  "km_from": 39.0,
+  "km_to": 48.718,
+  "nh_no": "NH146",
+  "notified_3a_on": "2026-07-10",
+  "project_id": "PRJ-RAI-G275512",
+  "republication_count": 0,
+  "so_number": "S.O. 4517(E)",
+  "source_doc_ids": [
+   275512
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Mori-kodi"
+  ]
+ },
+ {
+  "area_hectares": 910.6622,
+  "declared_3d_on": null,
+  "districts": [
+   "RAICHUR"
+  ],
+  "km_from": 273.4,
+  "km_to": 331.33,
+  "nh_no": "NH748A",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-RAI-G276002",
+  "republication_count": 0,
+  "so_number": "S.O. 4900(E)",
+  "source_doc_ids": [
+   276002
+  ],
+  "state": "KARNATAKA",
+  "villages": [
+   "Tippaladinni",
+   "Mandalgera",
+   "Singanodi",
+   "Ramapura",
+   "Baidoddi",
+   "Harkandoddi",
+   "Maliabad",
+   "Mittimalkapura",
+   "Bijanagera",
+   "Devanapalli",
+   "Kalmala",
+   "Hunsihalhuda",
+   "Mamadapura",
+   "Nelahal",
+   "Jalibenchi",
+   "Udamagal",
+   "Kamalapur",
+   "Anwar",
+   "Ashapur",
+   "Gowsanagara",
+   "Siravar",
+   "Jalapur",
+   "Atnur",
+   "Jakkaldinni"
+  ]
+ },
+ {
+  "area_hectares": 3.3808,
+  "declared_3d_on": "2026-09-01",
+  "districts": [
+   "RAMANATHAPURAM"
+  ],
+  "km_from": 79.66,
+  "km_to": 192.7,
+  "nh_no": "NH49",
+  "notified_3a_on": "2026-03-03",
+  "project_id": "PRJ-RAM-G275992",
+  "republication_count": 0,
+  "so_number": "S.O. 4841(E)",
+  "source_doc_ids": [
+   275992
+  ],
+  "state": "TAMIL NADU",
+  "villages": [
+   "Urapuli",
+   "Manjur",
+   "Kummukkottai",
+   "Kusavankudi",
+   "Landai",
+   "Achunthanvayal",
+   "Palankulam",
+   "Pottanamkattan",
+   "Kazhukurani"
+  ]
+ },
+ {
+  "area_hectares": 61.4986,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "Ri-Bhoi"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH6",
+  "notified_3a_on": "2026-05-29",
+  "project_id": "PRJ-RIB-G275708",
+  "republication_count": 0,
+  "so_number": "S.O. 4650(E)",
+  "source_doc_ids": [
+   275708
+  ],
+  "state": "MEGHALAYA",
+  "villages": [
+   "Pyllun",
+   "Umeit",
+   "Nongrah",
+   "Sumer Umbang",
+   "Mawpun Kshaid",
+   "Nongsder"
+  ]
+ },
+ {
+  "area_hectares": 1.2498,
+  "declared_3d_on": "2026-08-14",
+  "districts": [
+   "Sabarkantha"
+  ],
+  "km_from": 62.5,
+  "km_to": 104.0,
+  "nh_no": "NH168G",
+  "notified_3a_on": "2026-06-19",
+  "project_id": "PRJ-SAB-G275505",
+  "republication_count": 0,
+  "so_number": "S.O. 4520(E)",
+  "source_doc_ids": [
+   275505
+  ],
+  "state": "GUJARAT",
+  "villages": [
+   "Sapavada",
+   "Maniyor",
+   "Laloda"
+  ]
+ },
+ {
+  "area_hectares": 5.3628,
+  "declared_3d_on": "2026-08-14",
+  "districts": [
+   "SAGAR"
+  ],
+  "km_from": 108.115,
+  "km_to": 149.141,
+  "nh_no": "NH146",
+  "notified_3a_on": "2026-06-15",
+  "project_id": "PRJ-SAG-G275495",
+  "republication_count": 0,
+  "so_number": "S.O. 4523(E)",
+  "source_doc_ids": [
+   275495
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Bahadurpur",
+   "Pipalkhedi",
+   "Rasulpur",
+   "Chouki",
+   "Senpa",
+   "Mankapur",
+   "Mada"
+  ]
+ },
+ {
+  "area_hectares": 40.4028,
+  "declared_3d_on": null,
+  "districts": [
+   "SAGAR"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": null,
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-SAG-G276003",
+  "republication_count": 0,
+  "so_number": "S.O. 4876(E)",
+  "source_doc_ids": [
+   276003
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Ratona",
+   "Lahdara",
+   "Bhapel",
+   "Chakroda"
+  ]
+ },
+ {
+  "area_hectares": 2.915,
+  "declared_3d_on": "2026-08-25",
+  "districts": [
+   "SALEM"
+  ],
+  "km_from": 94.0,
+  "km_to": 180.0,
+  "nh_no": "NH44",
+  "notified_3a_on": "2025-12-16",
+  "project_id": "PRJ-SAL-G275812",
+  "republication_count": 0,
+  "so_number": "S.O. 4724(E)",
+  "source_doc_ids": [
+   275812
+  ],
+  "state": "TAMIL NADU",
+  "villages": [
+   "Vellar",
+   "Sekkarapatti"
+  ]
+ },
+ {
+  "area_hectares": 0.0112,
+  "declared_3d_on": null,
+  "districts": [
+   "SANGLI"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH965G",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-SAN-G275994",
+  "republication_count": 0,
+  "so_number": "S.O. 4874(E)",
+  "source_doc_ids": [
+   275994
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Shegaon"
+  ]
+ },
+ {
+  "area_hectares": 0.46,
+  "declared_3d_on": null,
+  "districts": [
+   "Satara"
+  ],
+  "km_from": 725.0,
+  "km_to": 865.35,
+  "nh_no": "NH4",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-SAT-G275996",
+  "republication_count": 0,
+  "so_number": "S.O. 4901(E)",
+  "source_doc_ids": [
+   275996
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Anavadi"
+  ]
+ },
+ {
+  "area_hectares": 1.1196,
+  "declared_3d_on": "2026-08-25",
+  "districts": [
+   "SHIMLA"
+  ],
+  "km_from": 129.05,
+  "km_to": 156.507,
+  "nh_no": "NH22",
+  "notified_3a_on": "2026-03-03",
+  "project_id": "PRJ-SHI-G275780",
+  "republication_count": 0,
+  "so_number": "S.O. 4726(E)",
+  "source_doc_ids": [
+   275780
+  ],
+  "state": "HIMACHAL PRADESH",
+  "villages": [
+   "Kawalag",
+   "Banreru"
+  ]
+ },
+ {
+  "area_hectares": 5.2342,
+  "declared_3d_on": null,
+  "districts": [
+   "Shri Ganganagar"
+  ],
+  "km_from": 175.0,
+  "km_to": 250.9,
+  "nh_no": "NH62",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-SHR-G276032",
+  "republication_count": 0,
+  "so_number": "S.O. 4898(E)",
+  "source_doc_ids": [
+   276032
+  ],
+  "state": "RAJASTHAN",
+  "villages": [
+   "Suratgarh"
+  ]
+ },
+ {
+  "area_hectares": 0.055,
+  "declared_3d_on": "2026-08-14",
+  "districts": [
+   "SOLAN"
+  ],
+  "km_from": 22.6,
+  "km_to": 42.1,
+  "nh_no": "NH205",
+  "notified_3a_on": "2026-06-08",
+  "project_id": "PRJ-SOL-G275498",
+  "republication_count": 0,
+  "so_number": "S.O. 4516(E)",
+  "source_doc_ids": [
+   275498
+  ],
+  "state": "HIMACHAL PRADESH",
+  "villages": [
+   "Dinan (253)",
+   "Nalag (244)",
+   "Kiarad (245)"
+  ]
+ },
+ {
+  "area_hectares": 0.769,
+  "declared_3d_on": null,
+  "districts": [
+   "SOLAPUR"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH548",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-SOL-G275995",
+  "republication_count": 0,
+  "so_number": "S.O. 4872(E)",
+  "source_doc_ids": [
+   275995
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Puri"
+  ]
+ },
+ {
+  "area_hectares": 3.7754,
+  "declared_3d_on": null,
+  "districts": [
+   "SOLAPUR"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": null,
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-SOL-G276023",
+  "republication_count": 0,
+  "so_number": "S.O. 4896(E)",
+  "source_doc_ids": [
+   276023
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Papnas",
+   "Ridhore",
+   "Pimpalner"
+  ]
+ },
+ {
+  "area_hectares": 0.053,
+  "declared_3d_on": null,
+  "districts": [
+   "SOLAPUR"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH548C",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-SOL-G276034",
+  "republication_count": 0,
+  "so_number": "S.O. 4897(E)",
+  "source_doc_ids": [
+   276034
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Kuslamb"
+  ]
+ },
+ {
+  "area_hectares": 238.2417,
+  "declared_3d_on": null,
+  "districts": [
+   "SONITPUR"
+  ],
+  "km_from": 90.1,
+  "km_to": 149.82,
+  "nh_no": "NH15",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-SON-G276050",
+  "republication_count": 0,
+  "so_number": "S.O. 4882(E)",
+  "source_doc_ids": [
+   276050
+  ],
+  "state": "ASSAM",
+  "villages": [
+   "Saikia Chuburi",
+   "Gazanga Guri",
+   "Mijibari Gaon",
+   "Bhotpara Gaon",
+   "Bhotpara Pathar",
+   "Borchola Bagan",
+   "Dhekiajuli Gaon",
+   "Keheru Khanda Gaon",
+   "Moila Ali Gaon",
+   "Ali Singa Gaon",
+   "Bali Siha Gaon",
+   "Medhi Chuburi Gaon",
+   "Ratan Juli Gaon",
+   "Bagipukhuri Gaon",
+   "Dhekiajuli Town(Part1,2,3,4)",
+   "Palash Basti Gaon",
+   "Bhakua Mari Gaon",
+   "Balipukhuri",
+   "Mithram Bangali Gaon",
+   "Chapaguri",
+   "Panbari",
+   "Balisiha Kachari",
+   "Borghat",
+   "Niz Bahbari",
+   "Kathalguri",
+   "Khalihamari",
+   "Dikraijan",
+   "Baithabhanga Bangali",
+   "Kachubil",
+   "Niraiati Gaon",
+   "Maila Gaon",
+   "Likhak Gaon",
+   "Chinga Chuburi Gaon",
+   "Napam Gaon",
+   "Niz Bihguri Gaon",
+   "Thelamara Ghat Gaon",
+   "Rohini Bil Pathar",
+   "Rohini Bil Gaon",
+   "Arasoti Jungle",
+   "Bamun pukhuri",
+   "Oubari Pathar",
+   "Kayaimari Gaon",
+   "Patia Pukhuri",
+   "Ghatuapathar Gaon",
+   "Barati Gaon",
+   "Gabharupar Gaon",
+   "Baligaon"
+  ]
+ },
+ {
+  "area_hectares": 6.1534,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "TUTICORIN( Thoothukudi)"
+  ],
+  "km_from": 234.0,
+  "km_to": 235.018,
+  "nh_no": null,
+  "notified_3a_on": "2025-10-17",
+  "project_id": "PRJ-TUT-G275762",
+  "republication_count": 0,
+  "so_number": "S.O. 4661(E)",
+  "source_doc_ids": [
+   275762
+  ],
+  "state": "TAMIL NADU",
+  "villages": [
+   "Eppodumvenran"
+  ]
+ },
+ {
+  "area_hectares": 0.5502,
+  "declared_3d_on": "2026-09-01",
+  "districts": [
+   "Vadodra"
+  ],
+  "km_from": 144.15,
+  "km_to": 145.4,
+  "nh_no": "NH48",
+  "notified_3a_on": "2025-12-24",
+  "project_id": "PRJ-VAD-G275952",
+  "republication_count": 0,
+  "so_number": "S.O. 4843(E)",
+  "source_doc_ids": [
+   275952
+  ],
+  "state": "GUJARAT",
+  "villages": [
+   "Bamangam"
+  ]
+ },
+ {
+  "area_hectares": 1.359,
+  "declared_3d_on": null,
+  "districts": [
+   "VIDISHA"
+  ],
+  "km_from": 71.615,
+  "km_to": 88.361,
+  "nh_no": "NH146",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-VID-G276036",
+  "republication_count": 0,
+  "so_number": "S.O. 4881(E)",
+  "source_doc_ids": [
+   276036
+  ],
+  "state": "MADHYA PRADESH",
+  "villages": [
+   "Madhipur"
+  ]
+ },
+ {
+  "area_hectares": 0.08829,
+  "declared_3d_on": null,
+  "districts": [
+   "WARDHA"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH353",
+  "notified_3a_on": "2026-09-03",
+  "project_id": "PRJ-WAR-G275988",
+  "republication_count": 0,
+  "so_number": "S.O. 4878(E)",
+  "source_doc_ids": [
+   275988
+  ],
+  "state": "MAHARASHTRA",
+  "villages": [
+   "Pavnar",
+   "Kutki"
+  ]
+ },
+ {
+  "area_hectares": 79.9524,
+  "declared_3d_on": "2026-08-24",
+  "districts": [
+   "West Jaintia Hills"
+  ],
+  "km_from": null,
+  "km_to": null,
+  "nh_no": "NH6",
+  "notified_3a_on": "2026-05-29",
+  "project_id": "PRJ-WES-G275704",
+  "republication_count": 0,
+  "so_number": "S.O. 4656(E)",
+  "source_doc_ids": [
+   275704
+  ],
+  "state": "MEGHALAYA",
+  "villages": [
+   "Sohphoh",
+   "Larnai",
+   "KdohKule",
+   "Wahiajer",
+   "Nongkhroh"
+  ]
+ }
+]

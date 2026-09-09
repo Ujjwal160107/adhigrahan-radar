@@ -1,0 +1,24 @@
+{
+ "doc_id": 275732,
+ "section": "3D",
+ "so_number": "S.O. 4662(E)",
+ "notified_on": "2026-08-24",
+ "parent_notified_on": "2026-03-16",
+ "nh_no": "NH552",
+ "km_from": null,
+ "km_to": null,
+ "state": "MADHYA PRADESH",
+ "districts": [
+  "MORENA"
+ ],
+ "villages": [
+  "Hingauna Khurd",
+  "Ganjrampur",
+  "Morena Gaon",
+  "Atarsuma",
+  "Lalor",
+  "Mudiya Kheda",
+  "Jigani"
+ ],
+ "area_hectares": 5.8582
+}

@@ -1,0 +1,38 @@
+{
+ "doc_id": 275491,
+ "section": "3D",
+ "so_number": "S.O. 4519(E)",
+ "notified_on": "2026-08-14",
+ "parent_notified_on": "2025-10-07",
+ "nh_no": "NH160A",
+ "km_from": 53.5,
+ "km_to": 105.47,
+ "state": "MAHARASHTRA",
+ "districts": [
+  "Nashik"
+ ],
+ "villages": [
+  "Amboli",
+  "Ambai",
+  "Sapgaon",
+  "Pimlad Trimbak",
+  "Pegalwadi (Trimbak)",
+  "Pahine",
+  "Kharoli",
+  "Trimbak",
+  "Pegalwadi (Nashik)",
+  "Mhsurli",
+  "Shevgedang",
+  "Wanjole",
+  "Aahurli",
+  "Awali Dumala",
+  "Saturli",
+  "Bhavli Budruk",
+  "Korapgaon",
+  "Kurnoli",
+  "Waki",
+  "Khambale",
+  "Dahalewadi"
+ ],
+ "area_hectares": 34.78523
+}

@@ -1,0 +1,23 @@
+{
+ "doc_id": 275708,
+ "section": "3D",
+ "so_number": "S.O. 4650(E)",
+ "notified_on": "2026-08-24",
+ "parent_notified_on": "2026-05-29",
+ "nh_no": "NH6",
+ "km_from": null,
+ "km_to": null,
+ "state": "MEGHALAYA",
+ "districts": [
+  "Ri-Bhoi"
+ ],
+ "villages": [
+  "Pyllun",
+  "Umeit",
+  "Nongrah",
+  "Sumer Umbang",
+  "Mawpun Kshaid",
+  "Nongsder"
+ ],
+ "area_hectares": 61.4986
+}

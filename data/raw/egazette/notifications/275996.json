@@ -1,0 +1,18 @@
+{
+ "doc_id": 275996,
+ "section": "3A",
+ "so_number": "S.O. 4901(E)",
+ "notified_on": "2026-09-03",
+ "parent_notified_on": null,
+ "nh_no": "NH4",
+ "km_from": 725.0,
+ "km_to": 865.35,
+ "state": "MAHARASHTRA",
+ "districts": [
+  "Satara"
+ ],
+ "villages": [
+  "Anavadi"
+ ],
+ "area_hectares": 0.46
+}

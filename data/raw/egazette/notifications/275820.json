@@ -1,0 +1,21 @@
+{
+ "doc_id": 275820,
+ "section": "3D",
+ "so_number": "S.O. 4725(E)",
+ "notified_on": "2026-08-25",
+ "parent_notified_on": null,
+ "nh_no": "NH135A",
+ "km_from": 108.5,
+ "km_to": 139.0,
+ "state": "UTTAR PRADESH",
+ "districts": [
+  "JAUNPUR"
+ ],
+ "villages": [
+  "Kanwariya",
+  "Maroofpur",
+  "Suirish Dehati",
+  "Chak Gohariya"
+ ],
+ "area_hectares": 3.1496
+}

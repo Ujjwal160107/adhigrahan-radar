@@ -1,0 +1,24 @@
+{
+ "doc_id": 275927,
+ "section": "3D",
+ "so_number": "S.O. 4833(E)",
+ "notified_on": "2026-09-01",
+ "parent_notified_on": "2025-09-02",
+ "nh_no": "NH505",
+ "km_from": 0.0,
+ "km_to": 75.0,
+ "state": "HIMACHAL PRADESH",
+ "districts": [
+  "LAHUL AND SPITI"
+ ],
+ "villages": [
+  "Kaza Khas (70/1)",
+  "Kaza Soma",
+  "Shego",
+  "Dhankar",
+  "Lingti",
+  "Poh",
+  "Lari"
+ ],
+ "area_hectares": 0.2474
+}

@@ -1,0 +1,20 @@
+{
+ "doc_id": 275497,
+ "section": "3D",
+ "so_number": "S.O. 4522(E)",
+ "notified_on": "2026-08-14",
+ "parent_notified_on": "2025-09-23",
+ "nh_no": "NH351K",
+ "km_from": 82.093,
+ "km_to": 102.284,
+ "state": "GUJARAT",
+ "districts": [
+  "GIR SOMNATH"
+ ],
+ "villages": [
+  "Bhacha",
+  "Kansari",
+  "Una"
+ ],
+ "area_hectares": 0.052
+}

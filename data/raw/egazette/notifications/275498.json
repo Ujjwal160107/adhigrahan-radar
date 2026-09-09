@@ -1,0 +1,20 @@
+{
+ "doc_id": 275498,
+ "section": "3D",
+ "so_number": "S.O. 4516(E)",
+ "notified_on": "2026-08-14",
+ "parent_notified_on": "2026-06-08",
+ "nh_no": "NH205",
+ "km_from": 22.6,
+ "km_to": 42.1,
+ "state": "HIMACHAL PRADESH",
+ "districts": [
+  "SOLAN"
+ ],
+ "villages": [
+  "Dinan (253)",
+  "Nalag (244)",
+  "Kiarad (245)"
+ ],
+ "area_hectares": 0.055
+}
