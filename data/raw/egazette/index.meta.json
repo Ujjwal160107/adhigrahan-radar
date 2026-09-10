@@ -1,0 +1,11 @@
+{
+ "corpus_sha256": "701adccc7a2015b6fe01115021efeac39d211ac0044834d78afe75f6d74f92c9",
+ "entries": 72,
+ "journals": {
+  "journal.ndjson": {
+   "bytes": 13590,
+   "sha256": "9bef3d5f96d32328d0545f2f9a0e91188b63843d8447b1d1f4860aaa79af5bc9"
+  }
+ },
+ "projected_at": "2026-09-10T00:35:06+00:00"
+}

@@ -15,11 +15,41 @@ import warnings
 
 from .. import config
 
+# What `extract` says about bytes it could not turn into text. The two are
+# not the same failure and must not be retried the same way: a PDF that opens
+# cleanly and simply has no text layer is a scan, and no number of
+# re-downloads will change that, while bytes that are not a PDF at all are
+# usually a download this host truncated and will serve correctly next time.
+NOT_A_PDF = "not a readable PDF"
+NO_TEXT_LAYER = "no text layer"
+
 
 def fetch(fetcher, doc_id, year):
     """The raw PDF bytes for one gazette document."""
     url = config.EGAZETTE_DOCUMENT.format(year=year, doc_id=doc_id)
     return fetcher.get(url).content
+
+
+def extract(pdf_bytes):
+    """`(text, None)`, or `(None, reason)` naming which failure this was.
+
+    Collapsing both failures into a bare `None` is what let an image-only
+    notification be re-downloaded on every harvest for ever: it was
+    indistinguishable from a dropped connection, so it stayed eligible, and
+    nothing counted how many times it had already cost a multi-megabyte
+    fetch.
+
+    Built on `to_text` rather than beside it, so there is still exactly one
+    place that opens a PDF.
+    """
+    text = to_text(pdf_bytes)
+    if text is None:
+        return None, NOT_A_PDF
+    if not text.strip():
+        # pdfplumber opened it, so the bytes really are a PDF; there is
+        # simply nothing in it to read.
+        return None, NO_TEXT_LAYER
+    return text, None
 
 
 def to_text(pdf_bytes):

@@ -26,6 +26,18 @@ from datetime import date, datetime
 
 from .records import Notification
 
+# Which parser read a document is part of what the reading *means*, so every
+# decision the harvest records carries this value.
+#
+# Bump it whenever a change here could alter what `parse` returns for a
+# document it has already read. That is what makes a correction reach the
+# corpus: `--reparse` re-reads every notification whose stored version is not
+# this one, and reconsiders rejections made by an older parser instead of
+# leaving them settled for ever. Every fix to this module so far has been
+# prompted by a real document an earlier version read wrongly, so this will
+# be bumped again.
+PARSER_VERSION = "2026.09.1"
+
 # Running headers and footers. Matched case-sensitively on the all-caps
 # masthead: the body text says "published in the Gazette of India,
 # Extraordinary" in ordinary case, and that sentence must survive.

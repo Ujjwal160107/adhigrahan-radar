@@ -54,24 +54,55 @@ class Project:
 
 def assemble(notifications):
     """Group notifications into projects. Deterministic: the result depends
-    on the notifications, never on the order they arrive in."""
+    on the notifications, never on the order they arrive in.
+
+    Also *stable*, which is a stronger requirement and a harder one. The
+    corpus grows one harvest at a time, and a project has to keep the same
+    identity as documents about it arrive - a §3A republished over the same
+    stretch, and later the §3D that closes it. Anchoring identity on the
+    newest document meant three harvests of a strictly growing corpus gave
+    one physical acquisition three different `project_id`s, and every
+    downstream reference to it - a risk score, a parcel binding, an officer's
+    watchlist entry - broke each time. Identity therefore anchors on the
+    *earliest* document known for a stretch, which no later harvest can
+    change, while the dates and measures still come from the latest, which is
+    the one that supersedes.
+    """
     usable = [n for n in notifications
               if n is not None and n.section in ("3A", "3D") and n.notified_on is not None]
     declarations = [n for n in usable if n.section == "3D" and n.parent_notified_on is not None]
     intentions = [n for n in usable if n.section == "3A"]
 
-    projects = [_closed(d) for d in _sorted(declarations)]
-    projects += [_open(group) for group in _unclaimed(intentions, declarations)]
+    groups = _stretch_groups(intentions)
+    closed_by = {}          # stretch key -> the declaration that closed it
+
+    projects = []
+    for declaration in _sorted(declarations):
+        key = _closes(declaration, groups)
+        if key is not None:
+            closed_by.setdefault(key, declaration.doc_id)
+        mine = key is not None and closed_by[key] == declaration.doc_id
+        projects.append(_closed(declaration, groups[key] if mine else ()))
+    projects += [_open(groups[key]) for key in sorted(groups) if key not in closed_by]
     return sorted(projects, key=lambda p: p.project_id)
 
 
-def _closed(declaration):
+def _closed(declaration, group=()):
+    """A §3D, and the §3A stretch it closes if that stretch was harvested too.
+
+    Taking the group's earliest notification as the identity anchor is what
+    lets a project survive being closed: the open project that existed before
+    the §3D arrived was anchored on that same document, so it keeps its id
+    and gains an end date rather than disappearing and being replaced by a
+    stranger.
+    """
     return _project(
         anchor=declaration,
+        id_anchor=group[0] if group else declaration,
         notified_3a_on=declaration.parent_notified_on,
         declared_3d_on=declaration.notified_on,
-        republication_count=0,
-        doc_ids=(declaration.doc_id,),
+        republication_count=max(0, len(group) - 1),
+        doc_ids=tuple(n.doc_id for n in group) + (declaration.doc_id,),
     )
 
 
@@ -80,11 +111,13 @@ def _open(group):
 
     The *latest* notification starts the clock: a re-published §3A supersedes
     its predecessor, and measuring from the superseded one would report a
-    breach that has not happened.
+    breach that has not happened. The *earliest* names the project, because
+    the latest is exactly the one a future harvest can change.
     """
     latest = group[-1]
     return _project(
         anchor=latest,
+        id_anchor=group[0],
         notified_3a_on=latest.notified_on,
         declared_3d_on=None,
         republication_count=len(group) - 1,
@@ -92,9 +125,10 @@ def _open(group):
     )
 
 
-def _project(anchor, notified_3a_on, declared_3d_on, republication_count, doc_ids):
+def _project(anchor, id_anchor, notified_3a_on, declared_3d_on, republication_count,
+             doc_ids):
     return Project(
-        project_id=_project_id(anchor),
+        project_id=_project_id(id_anchor),
         state=anchor.state,
         districts=anchor.districts,
         villages=anchor.villages,
@@ -119,19 +153,38 @@ def _project_id(notification):
     return f"PRJ-{abbr}-G{notification.doc_id}"
 
 
-def _unclaimed(intentions, declarations):
-    """§3A notifications no §3D closed, grouped by the stretch they cover.
+def _stretch_groups(intentions):
+    """Every §3A, grouped by the stretch of highway it covers.
+
+    Chronological within a group, so the earliest names the project and the
+    latest supersedes it.
+    """
+    groups = {}
+    for n in _sorted(intentions):
+        groups.setdefault(_stretch_key(n), []).append(n)
+    return groups
+
+
+def _closes(declaration, groups):
+    """The stretch this §3D closes, or None.
 
     A §3D claims a §3A when it recites that §3A's date *and* covers the same
     ground. The date alone is not enough - the Press publishes many
     notifications on one day, so two unrelated acquisitions routinely share a
-    date."""
-    groups = {}
-    for n in _sorted(intentions):
-        if any(_claims(d, n) for d in declarations):
-            continue
-        groups.setdefault(_stretch_key(n), []).append(n)
-    return [groups[k] for k in sorted(groups)]
+    date.
+
+    It claims the whole *stretch*, not the single notification whose date it
+    happens to recite. A §3D recites the §3A it closes, which is the latest
+    one; testing each §3A on its own therefore left every superseded
+    republication looking unclaimed, and each came back as its own open
+    project - a phantom second row for an acquisition that had already
+    finished, which could never close because the document that would close
+    it was already spoken for.
+    """
+    for key in sorted(groups):
+        if any(_claims(declaration, n) for n in groups[key]):
+            return key
+    return None
 
 
 def _claims(declaration, intention):

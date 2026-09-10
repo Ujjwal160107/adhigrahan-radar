@@ -4,7 +4,7 @@
 #   make setup     install python + node dependencies
 #   make build     regenerate data/output from the committed contract (s0-s15)
 #   make ingest    refresh data/raw from the live sources (separate, never in build)
-#   make test      334 backend/pipeline/ingest tests + 41 frontend tests, all green
+#   make test      369 backend/pipeline/ingest tests + 41 frontend tests, all green
 #   make api       serve on :8000
 #   make web       serve on :5173  (separate terminal)
 
@@ -68,6 +68,9 @@ build-all:
 ##   make ingest
 ##   make ingest ARGS="--since 2025 --limit 200"
 ##   make ingest ARGS="--dry-run"
+##   make ingest ARGS="--summarise-only"    republish the contract, no network
+##   make ingest ARGS="--reparse"           re-read the mirror, no network
+##   make ingest ARGS="--verify"            rehash the mirror, no network
 ingest:
 	$(PY) -m ingest.refresh $(ARGS)
 

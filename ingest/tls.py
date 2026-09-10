@@ -32,6 +32,8 @@ import socket
 import ssl
 import subprocess
 
+from .store import write_atomic
+
 _PEM_BLOCK = re.compile(rb"-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----", re.S)
 _AIA_CA_ISSUERS = re.compile(r"CA Issuers\s*-\s*URI:\s*(\S+)")
 
@@ -74,15 +76,23 @@ def chase_issuers(start_url, fetch, issuer_url_of, max_depth=MAX_CHAIN_DEPTH):
     return chain
 
 
-def ca_bundle(host, cache_dir, port=443, fetch=None):
+def ca_bundle(host, cache_dir, port=443, fetch=None, validate=None):
     """Path to a CA bundle that can verify `host`, cached under `cache_dir`.
 
     Returns None if the chain cannot be completed, which the caller should
     treat as "this source is unreachable right now" rather than as a reason
     to stop verifying certificates.
+
+    The cache is *checked*, not merely found. This chain has already rotated
+    once and will again, and a bundle that no longer verifies is worse than
+    no bundle: every fetch then fails deep inside the transport as an
+    ordinary connection error, and the harvest reports a wall of failed
+    documents with nothing anywhere pointing at one stale file as the cause.
+    One handshake is a negligible cost next to a harvest measured in hours.
     """
     path = os.path.join(cache_dir, f"{host}-ca.pem")
-    if os.path.exists(path):
+    verifies = validate or _verifies
+    if os.path.exists(path) and verifies(host, port, path):
         return path
 
     roots = _system_roots()
@@ -96,10 +106,26 @@ def ca_bundle(host, cache_dir, port=443, fetch=None):
     if not chain:
         return None
 
-    os.makedirs(cache_dir, exist_ok=True)
-    with open(path, "wb") as fh:
-        fh.write(build_bundle(roots, *(_as_pem(c) for c in chain)))
+    # Replaced atomically, and only once a complete replacement exists: a
+    # bundle half-overwritten by an interrupted refresh would verify nothing
+    # at all, and the stale one it replaced at least verified something.
+    write_atomic(path, build_bundle(roots, *(_as_pem(c) for c in chain)))
     return path
+
+
+def _verifies(host, port, bundle):
+    """Whether `bundle` actually completes this host's chain today.
+
+    A full verifying handshake, which is the only question that matters and
+    the only one the existence of a file cannot answer.
+    """
+    context = ssl.create_default_context(cafile=bundle)
+    try:
+        with socket.create_connection((host, port), timeout=30) as raw:
+            with context.wrap_socket(raw, server_hostname=host):
+                return True
+    except (OSError, ValueError):
+        return False
 
 
 def _system_roots():

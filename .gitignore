@@ -52,5 +52,20 @@ Thumbs.db
 # egazette.gov.in by the document id its parsed JSON records. The parsed
 # notifications beside them ARE committed, so `make build` needs no network.
 data/raw/egazette/pdf/
+# Extracted text for the KEPT corpus - a local convenience that lets
+# `--reparse` run without the PDFs on a machine that has harvested. Every
+# kept document's parsed JSON is committed beside it already, so this adds
+# nothing a clone needs.
+#
+# data/raw/egazette/rejected/ is deliberately NOT ignored. It holds the text
+# a rejection was decided from, which is the one thing a clone cannot
+# reconstruct: the PDF is never kept on that path, and without the text an
+# improved parser can never revisit the decision.
+data/raw/egazette/text/
 # The repaired CA bundle is a fetched artifact, rebuilt on demand.
 data/raw/.cache/
+# The store lock names a process that is running right now.
+data/raw/.lock
+# Half-written files from an interrupted atomic write; the real file is
+# either the old one or the new one, never one of these.
+.tmp-*.part
