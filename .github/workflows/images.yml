@@ -12,11 +12,17 @@ name: images
 # This is NOT ci.yml: that workflow lints and tests and must stay the gate on every push and pull
 # request. This one only produces artifacts, and it produces them from the same commands - the api
 # image runs `python pipeline/run_all.py --skip-handoff`, the web image runs `npm run build`
-# (`tsc && vite build`). Neither image is built on pull requests: a fork's build cannot be pushed
-# with this repository's GITHUB_TOKEN anyway, and the PR's job is to be reviewed cheaply.
+# (`tsc && vite build`).
+#
+# Pull requests build both images but never push them. Pushing is impossible from a fork's PR anyway -
+# the token there is read-only, which is exactly why `push:` is gated rather than the trigger being
+# removed. Building is worth the minutes: this workflow's job is to prove the Dockerfiles work, and a
+# file that first runs after it merges proves nothing.
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -62,7 +68,9 @@ jobs:
         with:
           context: .
           file: Dockerfile.api
-          push: true
+          # Never push from a pull request: a fork's token is read-only, and a PR's job is to
+          # validate the build, not to publish an artifact.
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.image.outputs.name }}:edge
             ${{ steps.image.outputs.name }}:sha-${{ github.sha }}
@@ -102,7 +110,8 @@ jobs:
         with:
           context: .
           file: Dockerfile.web
-          push: true
+          # Never push from a pull request, same reason as the api job above.
+          push: ${{ github.event_name != 'pull_request' }}
           # Vite inlines this at build time (frontend/src/api/client.ts reads import.meta.env.
           # VITE_API_URL), so the published image is bound to this API origin. Building for a
           # different hostname means passing a different value here - it cannot be changed on the
