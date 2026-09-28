@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1
+#
+# Adhigrahan Radar web - the static Vite build, served by nginx.
+#
+# Two things to know before changing this file:
+#
+#   1. THE API URL IS BAKED AT BUILD TIME. frontend/src/api/client.ts:33 reads
+#      `import.meta.env.VITE_API_URL || 'http://localhost:8000'`, and Vite inlines that value into
+#      the bundle. It is not, and cannot be, a runtime environment variable of this container -
+#      changing it means rebuilding the image with a different --build-arg. The default below is the
+#      tenant's real public API host.
+#
+#   2. The nginx port is 3000, matching this tenant's existing Service/Ingress (see deploy/nginx.conf
+#      and deploy/README.md). The build stage's node image never reaches the final image.
+#
+# Pinned by digest: the tag says what this is, the digest says what gets built.
+FROM node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 AS build
+
+WORKDIR /app
+
+# Manifest + lockfile alone first, so `npm ci`'s layer survives every source change. node:20 matches
+# ci.yml's web job (`node-version: "20"`), which is where `npm ci` + tsc + vitest + vite build are
+# already proven against this lockfile.
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ ./
+
+# Overridable so a different hostname can be built without editing this file; the default is the
+# hostname the cluster deploys (deploy/README.md).
+ARG VITE_API_URL=https://api-meghmitra.upayan.dev
+ENV VITE_API_URL=${VITE_API_URL}
+
+# `npm run build` is `tsc && vite build` (frontend/package.json) - the same command and the same
+# type-check gate as CI, writing frontend/dist.
+RUN npm run build
+
+FROM nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
+
+# Replaces the image's stock default.conf (SPA history fallback + caching headers live there).
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 3000
+# The base image's CMD ("nginx -g 'daemon off;'") is what runs.

@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meghmitra-web
+  namespace: meghmitra
+  labels:
+    app: meghmitra-web
+    app.kubernetes.io/name: adhigrahan-radar-web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: adhigrahan-radar
+    app.kubernetes.io/managed-by: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: meghmitra-web
+  template:
+    metadata:
+      labels:
+        app: meghmitra-web
+        app.kubernetes.io/name: adhigrahan-radar-web
+        app.kubernetes.io/component: web
+        app.kubernetes.io/part-of: adhigrahan-radar
+    spec:
+      priorityClassName: low-priority
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - vps
+      containers:
+        - name: meghmitra-web
+          image: ghcr.io/ujjwal160107/adhigrahan-radar/web:edge
+          # `edge` is a moving tag; argocd-image-updater resolves it to a digest in-cluster.
+          imagePullPolicy: Always
+          ports:
+            # nginx listens on 3000 (deploy/nginx.conf), matching this tenant's Service/Ingress
+            # rather than the image's stock 80.
+            - name: http
+              containerPort: 3000
+          resources:
+            # Static files behind nginx: the footprint of the container, not of the SPA.
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 96Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          securityContext:
+            # Deliberately no runAsNonRoot and no capability drop: the stock nginx master needs
+            # CHOWN/SETGID/SETUID/DAC_OVERRIDE to drop its workers to the `nginx` user and to write
+            # its pid/temp files, and the namespace enforces Pod Security Admission `baseline`,
+            # which admits exactly this. A non-root nginx would need the unprivileged image variant
+            # and a rewritten config - a change to the web build, not to this file.
+            seccompProfile:
+              type: RuntimeDefault
+            allowPrivilegeEscalation: false

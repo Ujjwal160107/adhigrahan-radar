@@ -1,0 +1,151 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meghmitra-api
+  namespace: meghmitra
+  labels:
+    # `app` is the selector label this tenant already uses and Deployment selectors are immutable,
+    # so it is kept exactly as-is across the cutover; the app.kubernetes.io/* set is the standard
+    # labelling the rest of the cluster carries (see the traefik Deployment in kube-system).
+    app: meghmitra-api
+    app.kubernetes.io/name: adhigrahan-radar-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: adhigrahan-radar
+    app.kubernetes.io/managed-by: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: meghmitra-api
+  template:
+    metadata:
+      labels:
+        app: meghmitra-api
+        app.kubernetes.io/name: adhigrahan-radar-api
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: adhigrahan-radar
+    spec:
+      # The node is memory-tight and this API is stateless (its state is on the PVC), so it is
+      # evictable first: being demoted costs a request, not data. Same class the tenant's other
+      # workloads already carry.
+      priorityClassName: low-priority
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - vps
+      securityContext:
+        # The image's own user (Dockerfile.api). fsGroup is belt-and-braces: the binding mechanism
+        # that actually matters is the hostPath directory's ownership, which the kubelet does not
+        # set for hostPath volumes - see deploy/README.md's "the PV the cluster side creates".
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # The image bakes data/output (SQLite DB, joblib models, fallback JSON), but the Deployment
+        # mounts the PVC *over* /app/data/output so that runtime writes - one AuditLog row per
+        # request (backend/auth.py:log_request), plus POST /watchlist and
+        # POST /projects/{id}/interventions - survive a restart. A fresh volume is therefore empty
+        # while the baked copy is exactly what should be in it, and this copies it across once.
+        # Idempotent: an already-seeded volume is left completely alone, so nothing here can
+        # overwrite live data on a later rollout.
+        - name: seed-data
+          image: ghcr.io/ujjwal160107/adhigrahan-radar/api:edge
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              if [ -f /data/vivaad.db ]; then
+                echo "seed-data: /data/vivaad.db already present; leaving the volume untouched"
+                exit 0
+              fi
+              echo "seed-data: empty volume, copying the image's baked pipeline output"
+              cp -a /app/data/output/. /data/
+              ls -l /data/vivaad.db /data/fallback /data/models
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            # The baked tree is read from /app/data/output; the volume is mounted somewhere else so
+            # the two can be distinguished.
+            - name: data
+              mountPath: /data
+      containers:
+        - name: meghmitra-api
+          image: ghcr.io/ujjwal160107/adhigrahan-radar/api:edge
+          # `edge` is a moving tag; argocd-image-updater resolves it to a digest in-cluster.
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            # Absolute, and identical to the image's own defaults (Dockerfile.api): declared here as
+            # well because the Deployment owns where the volume is mounted. See deploy/README.md for
+            # the full list - these are the only three this app reads.
+            - name: VIVAAD_DB
+              value: /app/data/output/vivaad.db
+            - name: VIVAAD_FALLBACK_DIR
+              value: /app/data/output/fallback
+            # backend/main.py's CORSMiddleware reads CORS_ORIGINS (default:
+            # "http://localhost:5173,http://127.0.0.1:5173"). The SPA is served from its own origin
+            # and calls the API cross-origin at the URL baked into its bundle, so the public web
+            # origin has to be listed here or every request from it fails preflight.
+            - name: CORS_ORIGINS
+              value: https://meghmitra.upayan.dev
+          resources:
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              cpu: 300m
+              memory: 768Mi
+          # GET /auth/session (backend/routers/auth.py:8) - the app ships NO health route, so these
+          # probe the cheapest real endpoint it has: derived from the process's own router, no
+          # database read, no fallback-cache path (backend/fallback.py only answers >=500s).
+          # Every probe request is audited like any other request (backend/main.py:audit_middleware),
+          # which is why the periods are 10s/30s rather than the 5s/15s used elsewhere on this
+          # cluster: 5s+15s would write ~23k AuditLog rows a day into a single-writer SQLite file.
+          readinessProbe:
+            httpGet:
+              path: /auth/session
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /auth/session
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /app/data/output
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: meghmitra-data-pvc
