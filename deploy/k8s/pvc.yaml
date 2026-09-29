@@ -1,0 +1,34 @@
+# The API's store: data/output/vivaad.db, data/output/models/*.joblib and data/output/fallback/.
+# It must be a volume, not image-only: the app writes to it on every request (one AuditLog row per
+# request - backend/auth.py:log_request - plus POST /watchlist and
+# POST /projects/{id}/interventions), and a container filesystem would lose that on every rollout.
+#
+# 1Gi is the request; the store is a few MB (a sqlite build artifact plus five small joblibs), and
+# the headroom is for the audit log's growth, not for data volume.
+#
+# storageClassName "" + volumeName force STATIC binding to a PV the cluster side creates - the same
+# shape this tenant's Postgres PVC already uses (and the same shape k8s/platform/storage's VCAP PVs
+# use in the cluster repo). It is deliberate that this file does NOT declare that PV: a static
+# PersistentVolume is cluster-owned here, exactly like the Namespace and the ArgoCD Application.
+# deploy/README.md specifies every field the PV needs. Until it exists, this claim stays Pending and
+# the API pod stays Pending with it - the API does not start against a local-path PV it might be
+# silently moved off later.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: meghmitra-data-pvc
+  namespace: meghmitra
+  labels:
+    app: meghmitra-api
+    app.kubernetes.io/name: adhigrahan-radar-api
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: adhigrahan-radar
+    app.kubernetes.io/managed-by: argocd
+spec:
+  storageClassName: ""
+  volumeName: meghmitra-data-pvc-vps
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

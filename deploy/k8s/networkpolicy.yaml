@@ -1,0 +1,80 @@
+# Namespace-wide default deny, then one allow per workload - the cluster's convention (the tenant's
+# existing policies carry the same three names and the same selectors, so these are adopted rather
+# than duplicated).
+#
+#   web (3000) <- Traefik (meghmitra.upayan.dev) + same namespace
+#   api (8000) <- Traefik (api-meghmitra.upayan.dev) + same namespace
+#
+# No egress policy: the app opens no outbound connection. The pipeline that creates the database
+# runs at image-build time, never at runtime, and the SPA's Google Fonts are fetched by the browser
+# (frontend/index.html), not by any pod here.
+#
+# The same-namespace rules are not what the traffic path uses - the SPA reaches the API through
+# Traefik at the baked public URL - but they exist so that an internal caller (a job, a debug pod)
+# cannot silently break.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: meghmitra-default-deny-ingress
+  namespace: meghmitra
+  labels:
+    app.kubernetes.io/part-of: adhigrahan-radar
+    app.kubernetes.io/managed-by: argocd
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: meghmitra-api-ingress
+  namespace: meghmitra
+  labels:
+    app.kubernetes.io/part-of: adhigrahan-radar
+    app.kubernetes.io/managed-by: argocd
+spec:
+  podSelector:
+    matchLabels:
+      app: meghmitra-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: meghmitra-web-ingress
+  namespace: meghmitra
+  labels:
+    app.kubernetes.io/part-of: adhigrahan-radar
+    app.kubernetes.io/managed-by: argocd
+spec:
+  podSelector:
+    matchLabels:
+      app: meghmitra-web
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3000

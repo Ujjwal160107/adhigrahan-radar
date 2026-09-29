@@ -1,0 +1,74 @@
+# syntax=docker/dockerfile:1
+#
+# Adhigrahan Radar - API image: FastAPI/uvicorn over the SQLite store, with the store baked in.
+#
+# Two choices here are deliberate and worth the reader's attention (deploy/README.md has the
+# deployment half of the same story):
+#
+#   1. The offline pipeline runs AT BUILD TIME (`python pipeline/run_all.py --skip-handoff`) - the
+#      same command .github/workflows/ci.yml uses. The repository commits only the *contract*
+#      (data/input/*.parquet and the gazette mirror in data/raw/), never data/output/, so an image
+#      that skipped this step would have no database at all. `--skip-handoff` is the documented
+#      default: s0 needs an external corpus that is not in this repository.
+#
+#   2. python 3.11, not 3.12. M.2 of docs/plans/2026-09-09-adhigrahan-radar-implementation-
+#      blueprint.md (line 1049) sketches this file against python:3.12-slim, and pyproject.toml
+#      allows >=3.11,<3.14, so 3.12 is a legitimate reading of the range. 3.11 is chosen anyway
+#      because ci.yml pins `python-version: "3.11"` - it is the only interpreter this project's
+#      ruff/pytest/pipeline runs are actually validated on. The database, models and fallback JSON
+#      baked here then come from a toolchain CI already proves green rather than from a second,
+#      unvalidated one. Changing this line is a one-word change if the project prefers the sketch.
+#
+# Pinned by digest: the tag says what this is, the digest says what gets built.
+FROM python:3.11-slim@sha256:e41613d42d4891e4930f79523f93f81bbc7632584ec65e36ab055f41a800b41e
+
+# PYTHONUNBUFFERED: uvicorn's startup line ("Vivaad Radar DB path: ...", backend/main.py) must reach
+# `kubectl logs` as it happens, not at process exit. No OMP_NUM_THREADS here on purpose -
+# pipeline/common.py sets it before any OpenMP library loads, and the request path uses no BLAS.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# requirements.txt alone first, so the (large: pandas, pyarrow, scikit-learn, shap) dependency layer
+# survives every source change. pytest and ruff come along because requirements.txt is the single
+# dependency list this project maintains; splitting a runtime subset out of it would be a second
+# list to drift from. The request path imports only fastapi/starlette/pydantic and the stdlib
+# (verified: `grep -rn "^import\|^from" backend/*.py backend/routers/*.py`).
+COPY requirements.txt ./
+RUN python -m pip install --no-cache-dir -r requirements.txt
+
+# The application tree. .dockerignore keeps everything the build reads (data/input/, data/raw/,
+# pipeline/, backend/, requirements.txt) and drops machine-local state and build products.
+COPY . .
+
+# Bake the store: data/output/vivaad.db + data/output/models/*.joblib + data/output/fallback/*.json.
+# Offline by construction - the pipeline reads data/input and data/raw and opens no socket. A
+# failure here fails the build rather than shipping an image without a database.
+RUN python pipeline/run_all.py --skip-handoff
+
+# Absolute paths under /app, not the repo-relative defaults (backend/db.py:db_path,
+# backend/fallback.py:fallback_dir): the Deployment mounts the data PVC over /app/data/output, and a
+# relative default would silently follow the process's working directory instead of the volume.
+ENV VIVAAD_DB=/app/data/output/vivaad.db \
+    VIVAAD_FALLBACK_DIR=/app/data/output/fallback
+
+# Non-root. backend/auth.py's audit middleware writes an AuditLog row for *every* request, so the
+# process needs write access to its own store; chowning the baked data/ here means a plain
+# `docker run` (no volume at all) is still a fully working API, and on the cluster it means the
+# seeding initContainer copies files that are already owned by this UID. UID/GID 10001 are also
+# what deploy/README.md tells the cluster side to own the static PV's hostPath directory with - the
+# kubelet does not chown a hostPath volume.
+RUN groupadd --gid 10001 radar \
+    && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin radar \
+    && chown -R 10001:10001 /app/data
+USER 10001:10001
+
+EXPOSE 8000
+
+# No --proxy-headers: uvicorn's default trusts forwarded headers only from 127.0.0.1, and behind
+# Traefik nothing in this app reads a client address anyway (AuditLog records role/method/path/status
+# only - backend/auth.py:log_request).
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

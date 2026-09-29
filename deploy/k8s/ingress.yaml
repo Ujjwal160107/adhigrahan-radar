@@ -1,0 +1,46 @@
+# The tenant's public entry point. Both hosts, one Ingress - the shape this cluster's other
+# tenants use (and the shape this hostname pair already has), so the cutover changes nothing that
+# DNS or the Traefik configuration can see.
+#
+# No `tls:` block: the cluster serves *.upayan.dev through Traefik's default TLSStore, a Cloudflare
+# Origin CA wildcard in kube-system (docs/certificates.md in the cluster repo). `router.tls: "true"`
+# is what makes this router a TLS router at all - the Ingress carries no certificate of its own.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: meghmitra-ingress
+  namespace: meghmitra
+  labels:
+    app.kubernetes.io/name: adhigrahan-radar
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: adhigrahan-radar
+    app.kubernetes.io/managed-by: argocd
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  rules:
+    # web: the static SPA (nginx, 3000)
+    - host: meghmitra.upayan.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: meghmitra-web
+                port:
+                  number: 3000
+    # api: FastAPI/uvicorn (8000) - the origin the SPA's bundle was built against
+    # (VITE_API_URL, Dockerfile.web)
+    - host: api-meghmitra.upayan.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: meghmitra-api
+                port:
+                  number: 8000
