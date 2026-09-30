@@ -2,8 +2,8 @@
 # existing policies carry the same three names and the same selectors, so these are adopted rather
 # than duplicated).
 #
-#   web (3000) <- Traefik (meghmitra.upayan.dev) + same namespace
-#   api (8000) <- Traefik (api-meghmitra.upayan.dev) + same namespace
+#   web (3000) <- Traefik (radar.upayan.dev) + same namespace
+#   api (8000) <- Traefik (api-radar.upayan.dev) + same namespace
 #
 # No egress policy: the app opens no outbound connection. The pipeline that creates the database
 # runs at image-build time, never at runtime, and the SPA's Google Fonts are fetched by the browser
@@ -15,8 +15,8 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: meghmitra-default-deny-ingress
-  namespace: meghmitra
+  name: adhigrahan-radar-default-deny-ingress
+  namespace: adhigrahan-radar
   labels:
     app.kubernetes.io/part-of: adhigrahan-radar
     app.kubernetes.io/managed-by: argocd
@@ -28,15 +28,15 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: meghmitra-api-ingress
-  namespace: meghmitra
+  name: adhigrahan-radar-api-ingress
+  namespace: adhigrahan-radar
   labels:
     app.kubernetes.io/part-of: adhigrahan-radar
     app.kubernetes.io/managed-by: argocd
 spec:
   podSelector:
     matchLabels:
-      app: meghmitra-api
+      app: adhigrahan-radar-api
   policyTypes:
     - Ingress
   ingress:
@@ -55,15 +55,15 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: meghmitra-web-ingress
-  namespace: meghmitra
+  name: adhigrahan-radar-web-ingress
+  namespace: adhigrahan-radar
   labels:
     app.kubernetes.io/part-of: adhigrahan-radar
     app.kubernetes.io/managed-by: argocd
 spec:
   podSelector:
     matchLabels:
-      app: meghmitra-web
+      app: adhigrahan-radar-web
   policyTypes:
     - Ingress
   ingress:

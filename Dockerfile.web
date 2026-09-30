@@ -28,7 +28,7 @@ COPY frontend/ ./
 
 # Overridable so a different hostname can be built without editing this file; the default is the
 # hostname the cluster deploys (deploy/README.md).
-ARG VITE_API_URL=https://api-meghmitra.upayan.dev
+ARG VITE_API_URL=https://api-radar.upayan.dev
 ENV VITE_API_URL=${VITE_API_URL}
 
 # `npm run build` is `tsc && vite build` (frontend/package.json) - the same command and the same

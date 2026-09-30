@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: meghmitra-web
-  namespace: meghmitra
+  name: adhigrahan-radar-web
+  namespace: adhigrahan-radar
   labels:
-    app: meghmitra-web
+    app: adhigrahan-radar-web
     app.kubernetes.io/name: adhigrahan-radar-web
     app.kubernetes.io/component: web
     app.kubernetes.io/part-of: adhigrahan-radar
     app.kubernetes.io/managed-by: argocd
 spec:
   selector:
-    app: meghmitra-web
+    app: adhigrahan-radar-web
   ports:
     - name: http
       port: 3000

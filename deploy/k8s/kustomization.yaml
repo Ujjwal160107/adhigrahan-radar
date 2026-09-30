@@ -2,11 +2,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Namespace, static PersistentVolume and ArgoCD Application are CLUSTER-owned (the cluster repo's
-# `k8s/apps/meghmitra/` keeps them; the Application's source.path points here). Everything listed
+# `k8s/apps/adhigrahan-radar/` keeps them; the Application's source.path points here). Everything listed
 # below is tenant-owned. `namespace:` is set for the same reason the cluster repo's per-app
 # kustomizations set it: one place names the namespace, so a namespace rename never means editing
 # seven files - and the kustomize namespace transformer fills it into any object that omits it.
-namespace: meghmitra
+namespace: adhigrahan-radar
 
 resources:
   - deployment-api.yaml

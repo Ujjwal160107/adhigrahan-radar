@@ -1,13 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: meghmitra-api
-  namespace: meghmitra
+  name: adhigrahan-radar-api
+  namespace: adhigrahan-radar
   labels:
     # `app` is the selector label this tenant already uses and Deployment selectors are immutable,
     # so it is kept exactly as-is across the cutover; the app.kubernetes.io/* set is the standard
     # labelling the rest of the cluster carries (see the traefik Deployment in kube-system).
-    app: meghmitra-api
+    app: adhigrahan-radar-api
     app.kubernetes.io/name: adhigrahan-radar-api
     app.kubernetes.io/component: api
     app.kubernetes.io/part-of: adhigrahan-radar
@@ -16,11 +16,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: meghmitra-api
+      app: adhigrahan-radar-api
   template:
     metadata:
       labels:
-        app: meghmitra-api
+        app: adhigrahan-radar-api
         app.kubernetes.io/name: adhigrahan-radar-api
         app.kubernetes.io/component: api
         app.kubernetes.io/part-of: adhigrahan-radar
@@ -89,7 +89,7 @@ spec:
             - name: data
               mountPath: /data
       containers:
-        - name: meghmitra-api
+        - name: adhigrahan-radar-api
           image: ghcr.io/ujjwal160107/adhigrahan-radar/api:edge
           # `edge` is a moving tag; argocd-image-updater resolves it to a digest in-cluster.
           imagePullPolicy: Always
@@ -109,7 +109,7 @@ spec:
             # and calls the API cross-origin at the URL baked into its bundle, so the public web
             # origin has to be listed here or every request from it fails preflight.
             - name: CORS_ORIGINS
-              value: https://meghmitra.upayan.dev
+              value: https://radar.upayan.dev
           resources:
             requests:
               cpu: 50m
@@ -148,4 +148,4 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: meghmitra-data-pvc
+            claimName: adhigrahan-radar-data-pvc

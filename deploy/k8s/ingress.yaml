@@ -8,8 +8,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: meghmitra-ingress
-  namespace: meghmitra
+  name: adhigrahan-radar-ingress
+  namespace: adhigrahan-radar
   labels:
     app.kubernetes.io/name: adhigrahan-radar
     app.kubernetes.io/component: ingress
@@ -22,25 +22,25 @@ spec:
   ingressClassName: traefik
   rules:
     # web: the static SPA (nginx, 3000)
-    - host: meghmitra.upayan.dev
+    - host: radar.upayan.dev
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: meghmitra-web
+                name: adhigrahan-radar-web
                 port:
                   number: 3000
     # api: FastAPI/uvicorn (8000) - the origin the SPA's bundle was built against
     # (VITE_API_URL, Dockerfile.web)
-    - host: api-meghmitra.upayan.dev
+    - host: api-radar.upayan.dev
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: meghmitra-api
+                name: adhigrahan-radar-api
                 port:
                   number: 8000

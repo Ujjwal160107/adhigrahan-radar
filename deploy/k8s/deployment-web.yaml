@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: meghmitra-web
-  namespace: meghmitra
+  name: adhigrahan-radar-web
+  namespace: adhigrahan-radar
   labels:
-    app: meghmitra-web
+    app: adhigrahan-radar-web
     app.kubernetes.io/name: adhigrahan-radar-web
     app.kubernetes.io/component: web
     app.kubernetes.io/part-of: adhigrahan-radar
@@ -13,11 +13,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: meghmitra-web
+      app: adhigrahan-radar-web
   template:
     metadata:
       labels:
-        app: meghmitra-web
+        app: adhigrahan-radar-web
         app.kubernetes.io/name: adhigrahan-radar-web
         app.kubernetes.io/component: web
         app.kubernetes.io/part-of: adhigrahan-radar
@@ -34,7 +34,7 @@ spec:
                     values:
                       - vps
       containers:
-        - name: meghmitra-web
+        - name: adhigrahan-radar-web
           image: ghcr.io/ujjwal160107/adhigrahan-radar/web:edge
           # `edge` is a moving tag; argocd-image-updater resolves it to a digest in-cluster.
           imagePullPolicy: Always

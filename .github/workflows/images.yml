@@ -117,7 +117,7 @@ jobs:
           # different hostname means passing a different value here - it cannot be changed on the
           # running container.
           build-args: |
-            VITE_API_URL=https://api-meghmitra.upayan.dev
+            VITE_API_URL=https://api-radar.upayan.dev
           tags: |
             ${{ steps.image.outputs.name }}:edge
             ${{ steps.image.outputs.name }}:sha-${{ github.sha }}

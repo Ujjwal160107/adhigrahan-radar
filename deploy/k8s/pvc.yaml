@@ -16,17 +16,17 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: meghmitra-data-pvc
-  namespace: meghmitra
+  name: adhigrahan-radar-data-pvc
+  namespace: adhigrahan-radar
   labels:
-    app: meghmitra-api
+    app: adhigrahan-radar-api
     app.kubernetes.io/name: adhigrahan-radar-api
     app.kubernetes.io/component: storage
     app.kubernetes.io/part-of: adhigrahan-radar
     app.kubernetes.io/managed-by: argocd
 spec:
   storageClassName: ""
-  volumeName: meghmitra-data-pvc-vps
+  volumeName: adhigrahan-radar-data-pvc-vps
   accessModes:
     - ReadWriteOnce
   resources:

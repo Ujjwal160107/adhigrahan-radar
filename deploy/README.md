@@ -57,8 +57,8 @@ release: merge, wait for the `images` workflow, then let the cluster sync.
 
 | Host | Backend |
 |---|---|
-| `meghmitra.upayan.dev` | `meghmitra-web` Service, port 3000 (the SPA) |
-| `api-meghmitra.upayan.dev` | `meghmitra-api` Service, port 8000 (FastAPI/uvicorn) |
+| `radar.upayan.dev` | `adhigrahan-radar-web` Service, port 3000 (the SPA) |
+| `api-radar.upayan.dev` | `adhigrahan-radar-api` Service, port 8000 (FastAPI/uvicorn) |
 
 Both are on one Ingress (`deploy/k8s/ingress.yaml`), `ingressClassName: traefik`, **no `tls:`
 block**: the cluster serves the `*.upayan.dev` wildcard through Traefik's default `TLSStore` (a
@@ -74,7 +74,7 @@ web container — the SPA calls the API directly at the baked origin above.
 |---|---|---|
 | `VIVAAD_DB` | `backend/db.py:10` | `/app/data/output/vivaad.db` |
 | `VIVAAD_FALLBACK_DIR` | `backend/fallback.py:15` | `/app/data/output/fallback` |
-| `CORS_ORIGINS` | `backend/main.py:71` | `https://meghmitra.upayan.dev` |
+| `CORS_ORIGINS` | `backend/main.py:71` | `https://radar.upayan.dev` |
 
 `.env.example` documents the first two and the third; the absolute values above are the same paths
 `Dockerfile.api` bakes in as image defaults, repeated in the manifest because the Deployment is what
@@ -82,7 +82,7 @@ mounts the volume.
 
 One more name matters but is **not** a runtime variable: `VITE_API_URL`
 (`frontend/src/api/client.ts:33`) is inlined into the bundle by Vite at **build time**, defaulting
-to `http://localhost:8000` and set to `https://api-meghmitra.upayan.dev` in `Dockerfile.web` and in
+to `http://localhost:8000` and set to `https://api-radar.upayan.dev` in `Dockerfile.web` and in
 the image workflow. Changing it requires rebuilding the web image; setting it on the running
 container does nothing.
 
@@ -92,9 +92,9 @@ container does nothing.
 
 The API allows cross-origin requests only from the origins in `CORS_ORIGINS`
 (`backend/main.py:69–76`), whose default is the two Vite dev origins
-(`http://localhost:5173,http://127.0.0.1:5173`). The SPA is served from `meghmitra.upayan.dev` and
-calls `https://api-meghmitra.upayan.dev`, which is a different origin (scheme and host both differ),
-so **`https://meghmitra.upayan.dev` must be listed or every request from the deployed frontend
+(`http://localhost:5173,http://127.0.0.1:5173`). The SPA is served from `radar.upayan.dev` and
+calls `https://api-radar.upayan.dev`, which is a different origin (scheme and host both differ),
+so **`https://radar.upayan.dev` must be listed or every request from the deployed frontend
 fails preflight**. It is listed, as the third row of the table above. Nothing else is needed:
 `allow_methods` already covers `GET` and `POST` (the two the frontend uses) and `allow_headers` is
 `["*"]`, which covers the demo-grade `X-Role` header (`backend/auth.py`) the app reads. No
@@ -109,7 +109,7 @@ does not add or remove a gate — it only makes the surface reachable.
 The API is not read-only. `backend/main.py:80`'s audit middleware writes an `AuditLog` row for
 **every** request, and `POST /watchlist` and `POST /projects/{id}/interventions` write user data.
 `data/output/vivaad.db` is therefore both a build artifact and a live store, which is why it is a
-`PersistentVolumeClaim` (`meghmitra-data-pvc`, 1Gi, RWO) rather than part of the container
+`PersistentVolumeClaim` (`adhigrahan-radar-data-pvc`, 1Gi, RWO) rather than part of the container
 filesystem — a container filesystem would discard the audit trail and the watchlist on every
 rollout.
 
@@ -129,30 +129,30 @@ The two halves of that:
 ## What lives where
 
 Tenant-owned, i.e. **in this repository** (`deploy/k8s/`, rendered by `kustomize build deploy/k8s`):
-the `meghmitra-api` and `meghmitra-web` Deployments and Services, `meghmitra-ingress`, three
-NetworkPolicies (`meghmitra-default-deny-ingress` plus one allow for each workload, allowing Traefik
-from `kube-system` and same-namespace callers), and `meghmitra-data-pvc`. There is no egress policy
+the `adhigrahan-radar-api` and `adhigrahan-radar-web` Deployments and Services, `adhigrahan-radar-ingress`, three
+NetworkPolicies (`adhigrahan-radar-default-deny-ingress` plus one allow for each workload, allowing Traefik
+from `kube-system` and same-namespace callers), and `adhigrahan-radar-data-pvc`. There is no egress policy
 because the deployment needs none: the pipeline that builds the database runs at image-build time,
 never at runtime.
 
 Cluster-owned, i.e. **not here**, and managed in the cluster's own repository:
 
-- **The Namespace** (`meghmitra`) — created and labelled there, including its Pod Security Admission
-  labels. Nothing in `deploy/k8s/` declares it; the kustomization only sets `namespace: meghmitra`
+- **The Namespace** (`adhigrahan-radar`) — created and labelled there, including its Pod Security Admission
+  labels. Nothing in `deploy/k8s/` declares it; the kustomization only sets `namespace: adhigrahan-radar`
   so every object lands in it.
 - **The ArgoCD Application** — this directory is the `source.path` of an Application that also
   carries the `argocd-image-updater` annotations that track `:edge` by digest.
 - **The static PersistentVolume** the PVC binds to — see below.
 
-Object *names* (`meghmitra-api`, `meghmitra-web`, `meghmitra-ingress`, the NetworkPolicy names) are
-the tenant's existing names and are deliberately unchanged, together with the `app: meghmitra-api` /
-`app: meghmitra-web` selector labels, the Service ports (8000/3000) and the hostnames. A Kubernetes
+Object *names* (`adhigrahan-radar-api`, `adhigrahan-radar-web`, `adhigrahan-radar-ingress`, the NetworkPolicy names) are
+the tenant's existing names and are deliberately unchanged, together with the `app: adhigrahan-radar-api` /
+`app: adhigrahan-radar-web` selector labels, the Service ports (8000/3000) and the hostnames. A Kubernetes
 Deployment's selector is immutable, and keeping the rest means the cutover is a change of manifest
 source, not a change of contract.
 
 ### The static PV the cluster side creates
 
-`meghmitra-data-pvc` uses `storageClassName: ""` and `volumeName: meghmitra-data-pvc-vps`, so it
+`adhigrahan-radar-data-pvc` uses `storageClassName: ""` and `volumeName: adhigrahan-radar-data-pvc-vps`, so it
 binds **statically** and never to a dynamically provisioned `local-path` volume — a claim that could
 silently reappear on the node's root disk. The cluster side creates the matching PV (the pattern its
 other tenants use: a `vps-data`-backed static PV with node affinity, e.g.
@@ -162,7 +162,7 @@ other tenants use: a `vps-data`-backed static PV with node affinity, e.g.
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: meghmitra-data-pvc-vps          # must equal the PVC's volumeName
+  name: adhigrahan-radar-data-pvc-vps          # must equal the PVC's volumeName
   annotations:
     # The cluster's invariant for PVs that hold data: a GitOps mistake must not be able to prune it.
     argocd.argoproj.io/sync-options: Delete=false,Prune=false
@@ -174,7 +174,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain # the store outlives the claim
   storageClassName: ""                  # matches the PVC; "" means static binding
   hostPath:
-    path: /srv/data/meghmitra-data      # the 20 GB vps-data volume (docs/storage.md)
+    path: /srv/data/adhigrahan-radar-data      # the 20 GB vps-data volume (docs/storage.md)
     type: Directory
   nodeAffinity:
     required:
@@ -189,7 +189,7 @@ Two things that are easy to get wrong:
 
 - **`type: Directory` requires the directory to exist**, and the API (UID/GID 10001) must be able to
   write in it. The kubelet does not change ownership on a `hostPath` volume, so on the node:
-  `install -d -o 10001 -g 10001 -m 0750 /srv/data/meghmitra-data`. That is also the UID `Dockerfile.api`
+  `install -d -o 10001 -g 10001 -m 0750 /srv/data/adhigrahan-radar-data`. That is also the UID `Dockerfile.api`
   runs as — the app writes to its store on every request, so an unwritable volume is a 500, not a
   log line.
 - Until the PV exists, the claim stays `Pending` and the API pod stays `Pending` with it. That is
@@ -197,9 +197,9 @@ Two things that are easy to get wrong:
 
 ## Cutover: the current occupant of these hostnames
 
-`meghmitra.upayan.dev` and `api-meghmitra.upayan.dev` are **already serving a different
+`radar.upayan.dev` and `api-radar.upayan.dev` are **already serving a different
 application** — a Node web/API pair over PostGIS, with images from another registry and class-A data
-in its own PVC/PV. The hostnames and the namespace (`meghmitra`) are shared deliberately: this
+in its own PVC/PV. The hostnames and the namespace (`adhigrahan-radar`) are shared deliberately: this
 deployment replaces that one, and the ArgoCD Application for the tenant will point at this
 directory.
 
